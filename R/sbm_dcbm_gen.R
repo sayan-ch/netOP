@@ -1,9 +1,6 @@
 wrapped.dcsbm.gen <- function(n, K, B, psi = rep(1, n),
                               PI = rep(1/K, K), ncore = 1)
 {
-  # Ensure memory is freed after function execution by calling garbage collection
-  on.exit(gc())
-
   # Generate community assignments for each node (g) using probabilities in PI
   g <- sample.int(K, n, TRUE, PI)
 
@@ -31,8 +28,9 @@ wrapped.dcsbm.gen <- function(n, K, B, psi = rep(1, n),
                   }, mc.cores = ncore))  # Use multiple cores to speed up the loop
 
   # Create a sparse adjacency matrix from the list of edges (stor)
-  A <- Matrix::sparseMatrix(stor[, 1], stor[, 2], x = 1, dims = c(n, n),
-                            symmetric = TRUE)
+  A <- Matrix::sparseMatrix(i = c(stor[, 1], stor[, 2]),
+                            j = c(stor[, 2], stor[, 1]),
+                            x = 1, dims = c(n, n))
 
   # Return a list containing the adjacency matrix (A), community memberships (g), and the scaled psi values
   return(list(A = A, g = g, psi = psi.scale))

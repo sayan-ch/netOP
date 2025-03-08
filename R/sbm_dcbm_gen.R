@@ -31,25 +31,30 @@ wrapped.dcsbm.gen <- function(n, K, B, psi = rep(1, n),
                   }, mc.cores = ncore))  # Use multiple cores to speed up the loop
 
   # Create a sparse adjacency matrix from the list of edges (stor)
-  A <- Matrix::sparseMatrix(stor[, 1], stor[, 2], dims = c(n, n), symmetric = TRUE)
+  A <- Matrix::sparseMatrix(stor[, 1], stor[, 2], x = 1, dims = c(n, n),
+                            symmetric = TRUE)
 
   # Return a list containing the adjacency matrix (A), community memberships (g), and the scaled psi values
-  return(list(A = A, member = g, psi = psi.scale))
+  return(list(A = A, g = g, psi = psi.scale))
 }
 
-#' Title: DCSBM Generator
-#' Description: Generates network data from SBM or DCBM
+#' @title SBM or DCBM Network Generator
+#' @description
+#' SBM or DCBM generator
+#'   Generates network data from SBM or DCBM
 #' @param n Number of nodes
 #' @param K Number of communities
-#' @param B K $\times$ K community connectivity matrix
+#' @param B K \eqn{\times} K community connectivity matrix
 #' @param sparsity Sparsity of the network, used to compute B if B is not provided.
 #' @param out_in_ratio Ratio of out-community to in-community connections, used to compute B if B is not provided. B is computed as sparsity * (diag(1 - out_in_ratio, K, K) + matrix(out_in_ratio, K, K)).
 #' @param sbm Logical flag indicating whether the network is generated from SBM (TRUE) or DCBM (FALSE). If sbm = TRUE, psi is ignored and set to rep(1, n).
-#' @param psi Vector of length n containing the degree correction parameter for the community connectivity matrix.
+#' @param psi \eqn{\psi} Vector of length n containing the degree correction parameter for DCBM.
 #' @param PI Vector of length K containing the community membership probabilities. Defaults to equal proportions.
 #' @param ncore Number of processors to use for parallel processing. Defaults to half the number of detected cores.
 #' @return A list containing the adjacency matrix (A), community memberships (g), and the scaled psi values.
-#' @return A sparse adjacency matrix (A) of size n x n. A[i, j] $\sim$ Bernoulli(B[g[i], g[j]] $\times$ psi[i] $\times$ psi[j]).
+#' @return A sparse adjacency matrix of size n x n. \eqn{A_{ij} \sim} Bernoulli\eqn{\left(B(g_i, g_j) \psi_i \psi_j\right)}.
+#' @return g Vector of length n containing the community memberships for each node. Communities are sampled from 1:K with replacement using probabilities in PI.
+#' @return psi Vector of length n containing the scaled degree correction parameter for each node. psi is scaled such that the maximum value for each community is 1.
 #' @export
 #' @examples
 #' dcsbm_gen(n = 100, K = 5, sparsity = 0.5, out_in_ratio = 0.1, sbm = TRUE)

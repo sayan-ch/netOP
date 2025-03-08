@@ -2,8 +2,7 @@
 % Please edit documentation in R/sbm_dcbm_gen.R
 \name{dcsbm_gen}
 \alias{dcsbm_gen}
-\title{Title: DCSBM Generator
-Description: Generates network data from SBM or DCBM}
+\title{SBM or DCBM Network Generator}
 \usage{
 dcsbm_gen(
   n,
@@ -22,7 +21,7 @@ dcsbm_gen(
 
 \item{K}{Number of communities}
 
-\item{B}{K $\times$ K community connectivity matrix}
+\item{B}{K \eqn{\times} K community connectivity matrix}
 
 \item{sparsity}{Sparsity of the network, used to compute B if B is not provided.}
 
@@ -30,7 +29,7 @@ dcsbm_gen(
 
 \item{sbm}{Logical flag indicating whether the network is generated from SBM (TRUE) or DCBM (FALSE). If sbm = TRUE, psi is ignored and set to rep(1, n).}
 
-\item{psi}{Vector of length n containing the degree correction parameter for the community connectivity matrix.}
+\item{psi}{\eqn{\psi} Vector of length n containing the degree correction parameter for DCBM.}
 
 \item{PI}{Vector of length K containing the community membership probabilities. Defaults to equal proportions.}
 
@@ -39,11 +38,15 @@ dcsbm_gen(
 \value{
 A list containing the adjacency matrix (A), community memberships (g), and the scaled psi values.
 
-A sparse adjacency matrix (A) of size n x n. A\link{i, j} $\sim$ Bernoulli(B[g\link{i}, g\link{j}] $\times$ psi\link{i} $\times$ psi\link{j}).
+A sparse adjacency matrix of size n x n. \eqn{A_{ij} \sim} Bernoulli\eqn{\left(B(g_i, g_j) \psi_i \psi_j\right)}.
+
+g Vector of length n containing the community memberships for each node. Communities are sampled from 1:K with replacement using probabilities in PI.
+
+psi Vector of length n containing the scaled degree correction parameter for each node. psi is scaled such that the maximum value for each community is 1.
 }
 \description{
-Title: DCSBM Generator
-Description: Generates network data from SBM or DCBM
+SBM or DCBM generator
+Generates network data from SBM or DCBM
 }
 \examples{
 dcsbm_gen(n = 100, K = 5, sparsity = 0.5, out_in_ratio = 0.1, sbm = TRUE)

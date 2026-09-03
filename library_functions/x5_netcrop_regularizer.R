@@ -1158,105 +1158,105 @@ plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
 
 
 # Benchmark code (intentionally not run when this file is sourced).
-library(Matrix)
-system.time(
-  net1 <- generate_dcbm(
-    n = 1000,
-    K = 5,
-    P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
-    psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
-    ncores = 8L
-  )
-)
-system.time(
-  net2 <- generate_dcbm(
-    n = 1000,
-    K = 5,
-    P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
-    psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
-    ncores = 8L
-  )
-)
-
-
-system.time(
-  nc_out1 <- netcrop_tune_regularizer(
-    A = net1,
-    K = 5,
-    tau_candidates = seq(0, 2, by = 0.05),
-    use_dcbm = TRUE,
-    nrep = 5L,
-    use_laplacian = TRUE,
-    losses = "sse",
-    # label_reference = "leave_pair_out",
-    ncores = 8L,
-    force_windows = FALSE
-  )
-)
-
-system.time(
-  nc_out2 <- netcrop_tune_regularizer(
-    A = net2,
-    K = 5,
-    tau_candidates = seq(0, 2, by = 0.05),
-    use_dcbm = TRUE,
-    nrep = 5L,
-    use_laplacian = TRUE,
-    losses = "sse",
-    # label_reference = "leave_pair_out",
-    ncores = 8L,
-    force_windows = FALSE
-  )
-)
-
-# nc_out
-# summary(nc_out)
-# plot(nc_out)
-
-
-system.time(
-  dk.out1 <- dkest_tune_regularizer(
-    A = net1,
-    K = 5,
-    tau_candidates = seq(0, 2, by = 0.05),
-    use_laplacian = TRUE,
-    use_dcbm = TRUE,
-    ncores = 8L
-  )
-)
-
-system.time(
-  dk.out2 <- dkest_tune_regularizer(
-    A = net2,
-    K = 5,
-    tau_candidates = seq(0, 2, by = 0.05),
-    use_laplacian = TRUE,
-    use_dcbm = TRUE,
-    ncores = 8L
-  )
-)
-
-# dk.out
-# summary(dk.out)
-# plot(dk.out)
-
-system.time(
-  or.out <- oracle_plotter(
-    A = list(net1, net2),
-    g_true = list(attributes(net1)$generator_parameters$g_true,
-                  attributes(net2)$generator_parameters$g_true),
-    tau_candidates = seq(0, 2, by = 0.05),
-    netcrop_outcomes = list(nc_out1, nc_out2),
-    dkest_outcomes = list(dk.out1, dk.out2),
-    include_netcrop_mean = TRUE,
-    include_netcrop_mode = TRUE,
-    losses = NULL,
-    engines = c("sonnet", "spectral_cluster"),
-    matching_method = "greedy",
-    ncores = 8L,
-    force_windows = FALSE
-  )
-)
-
-or.out
-attributes(or.out)
+# library(Matrix)
+# system.time(
+#   net1 <- generate_dcbm(
+#     n = 1000,
+#     K = 5,
+#     P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
+#     psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
+#     ncores = 8L
+#   )
+# )
+# system.time(
+#   net2 <- generate_dcbm(
+#     n = 1000,
+#     K = 5,
+#     P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
+#     psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
+#     ncores = 8L
+#   )
+# )
+# 
+# 
+# system.time(
+#   nc_out1 <- netcrop_tune_regularizer(
+#     A = net1,
+#     K = 5,
+#     tau_candidates = seq(0, 2, by = 0.05),
+#     use_dcbm = TRUE,
+#     nrep = 5L,
+#     use_laplacian = TRUE,
+#     losses = "sse",
+#     # label_reference = "leave_pair_out",
+#     ncores = 8L,
+#     force_windows = FALSE
+#   )
+# )
+# 
+# system.time(
+#   nc_out2 <- netcrop_tune_regularizer(
+#     A = net2,
+#     K = 5,
+#     tau_candidates = seq(0, 2, by = 0.05),
+#     use_dcbm = TRUE,
+#     nrep = 5L,
+#     use_laplacian = TRUE,
+#     losses = "sse",
+#     # label_reference = "leave_pair_out",
+#     ncores = 8L,
+#     force_windows = FALSE
+#   )
+# )
+# 
+# # nc_out
+# # summary(nc_out)
+# # plot(nc_out)
+# 
+# 
+# system.time(
+#   dk.out1 <- dkest_tune_regularizer(
+#     A = net1,
+#     K = 5,
+#     tau_candidates = seq(0, 2, by = 0.05),
+#     use_laplacian = TRUE,
+#     use_dcbm = TRUE,
+#     ncores = 8L
+#   )
+# )
+# 
+# system.time(
+#   dk.out2 <- dkest_tune_regularizer(
+#     A = net2,
+#     K = 5,
+#     tau_candidates = seq(0, 2, by = 0.05),
+#     use_laplacian = TRUE,
+#     use_dcbm = TRUE,
+#     ncores = 8L
+#   )
+# )
+# 
+# # dk.out
+# # summary(dk.out)
+# # plot(dk.out)
+# 
+# system.time(
+#   or.out <- oracle_plotter(
+#     A = list(net1, net2),
+#     g_true = list(attributes(net1)$generator_parameters$g_true,
+#                   attributes(net2)$generator_parameters$g_true),
+#     tau_candidates = seq(0, 2, by = 0.05),
+#     netcrop_outcomes = list(nc_out1, nc_out2),
+#     dkest_outcomes = list(dk.out1, dk.out2),
+#     include_netcrop_mean = TRUE,
+#     include_netcrop_mode = TRUE,
+#     losses = NULL,
+#     engines = c("sonnet", "spectral_cluster"),
+#     matching_method = "greedy",
+#     ncores = 8L,
+#     force_windows = FALSE
+#   )
+# )
+# 
+# or.out
+# attributes(or.out)

@@ -1,19 +1,21 @@
-# NETCROP dimension selection for symmetric RDPGs
+# NETCROP dimension selection for latent-space models
 #
-# This file preserves the original four-stage computational flow: decompose
-# overlapping subnetworks, construct every candidate embedding, align each
-# non-reference embedding through the overlap, and evaluate every unordered
-# pair of non-overlap pieces. Source the numbered helpers, x0_helpers.R, and
+# This implementation preserves the pasted three-stage computational flow:
+# fit every candidate on every overlapping subnetwork, exactly reparameterize
+# the fitted inner-product LSM as a squared-distance LSM, rigidly align each fit
+# to the first split through the overlap, and evaluate every unordered pair of
+# non-overlap pieces. Source the numbered helpers, x0_helpers.R, and
 # x1_sonnet.R before this file.
 
-netcrop_rdpg <- function(
+# Select an LSM latent dimension by overlapping-subnetwork cross-validation.
+netcrop_lsm <- function(
     A,
     d_candidates,
     num_subnetworks = NULL,
     overlap_size = NULL,
     nrep = 1L,
     losses = c("sse", "bin_dev", "auc_as_loss"),
-    eig_options = list(),
+    lsm_options = list(),
     ncores = max(
       floor(parallel::detectCores() / 2),
       1L,
@@ -28,10 +30,10 @@ netcrop_rdpg <- function(
   call <- match.call()
   retain_intermediates <- match.arg(retain_intermediates)
   required_helpers <- c(
-    "uni_mclapply", "is_symmetric_matrix", "eig_decomp", "procrustes",
+    "uni_mclapply", "is_symmetric_matrix", "lsm_pgd", "procrustes",
     "netcrop_param_select", "netcrop_splitter", "modal",
-    "estimate_spectral_decomp_ram",
-    "estimate_matrix_product_ram", "report_ram_formula"
+    "estimate_spectral_decomp_ram", "estimate_matrix_product_ram",
+    "report_ram_formula"
   )
   missing_helpers <- required_helpers[!vapply(
     required_helpers,
@@ -43,7 +45,7 @@ netcrop_rdpg <- function(
   if (length(missing_helpers) > 0L) {
     stop(
       "Source the numbered helper files, x0_helpers.R, and x1_sonnet.R ",
-      "before x3_netcrop_rdpg.R. Missing: ",
+      "before x4_netcrop_lsm.R. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -92,18 +94,18 @@ netcrop_rdpg <- function(
   if (any(!is.finite(A_values))) {
     stop("A must contain only finite numeric values.", call. = FALSE)
   }
+  if (any(!A_values %in% c(0, 1))) {
+    stop("A must contain only binary values 0 and 1.", call. = FALSE)
+  }
   if (!is_symmetric_matrix(A)) {
-    stop("A must be symmetric for symmetric RDPG NETCROP.", call. = FALSE)
+    stop("A must be symmetric for LSM NETCROP.", call. = FALSE)
   }
   A_diagonal <- if (inherits(A, "Matrix")) Matrix::diag(A) else diag(A)
   if (any(A_diagonal != 0)) {
     stop("A must have a zero diagonal (no self-loops).", call. = FALSE)
   }
-  if (any(A_values < 0)) {
-    stop("A must be non-negative.", call. = FALSE)
-  }
   if (sum(A_values) == 0) {
-    stop("A is an empty graph; RDPG NETCROP is undefined.", call. = FALSE)
+    stop("A is an empty graph; LSM NETCROP is undefined.", call. = FALSE)
   }
   if (inherits(A, "symmetricMatrix")) {
     A <- methods::as(A, "generalMatrix")
@@ -124,8 +126,7 @@ netcrop_rdpg <- function(
     if (length(unknown_parameter_options) > 0L) {
       stop(
         "parameter_select_options contains unsupported component(s): ",
-        paste(unknown_parameter_options, collapse = ", "),
-        ".",
+        paste(unknown_parameter_options, collapse = ", "), ".",
         call. = FALSE
       )
     }
@@ -177,6 +178,7 @@ netcrop_rdpg <- function(
     }
     seed <- as.double(seed)
   }
+
   if (!is.numeric(d_candidates) || length(d_candidates) < 1L ||
       anyNA(d_candidates) || any(!is.finite(d_candidates)) ||
       any(d_candidates < 1) || any(d_candidates != floor(d_candidates))) {
@@ -189,37 +191,35 @@ netcrop_rdpg <- function(
     stop("losses must contain non-empty function names.", call. = FALSE)
   }
   losses <- unique(losses)
-  validate_named_list(eig_options, "eig_options")
-  protected_eig_options <- c(
-    "A", "d", "only_values", "order_by", "validate_inputs"
-  )
-  conflicts <- intersect(names(eig_options), protected_eig_options)
-  if (length(conflicts) > 0L) {
+
+  validate_named_list(lsm_options, "lsm_options")
+  protected_lsm_options <- c("A", "d", "Z_init", "alpha_init", "ram_check")
+  lsm_conflicts <- intersect(names(lsm_options), protected_lsm_options)
+  if (length(lsm_conflicts) > 0L) {
     stop(
-      "eig_options cannot override ", paste(conflicts, collapse = ", "), ".",
+      "lsm_options cannot override ",
+      paste(lsm_conflicts, collapse = ", "), ".",
       call. = FALSE
     )
   }
-  unsupported_eig_options <- setdiff(
-    names(eig_options),
-    names(formals(eig_decomp))
-  )
-  if (length(unsupported_eig_options) > 0L) {
+  allowed_lsm_options <- c("step_size", "niter", "trace", "epsilon", "use_cpp")
+  unsupported_lsm_options <- setdiff(names(lsm_options), allowed_lsm_options)
+  if (length(unsupported_lsm_options) > 0L) {
     stop(
-      "eig_options contains unsupported argument(s): ",
-      paste(unsupported_eig_options, collapse = ", "), ".",
+      "lsm_options contains unsupported component(s): ",
+      paste(unsupported_lsm_options, collapse = ", "), ".",
       call. = FALSE
     )
   }
-  resolved_eig_options <- utils::modifyList(
+  resolved_lsm_options <- utils::modifyList(
     list(
-      scale_by = "none",
-      use_laplacian = FALSE,
-      engine = "rspectra",
-      force_engine = TRUE,
-      safe_d_multiplier = 1
+      step_size = 0.3,
+      niter = 100L,
+      trace = FALSE,
+      epsilon = 1e-6,
+      use_cpp = TRUE
     ),
-    eig_options,
+    lsm_options,
     keep.null = TRUE
   )
 
@@ -286,18 +286,15 @@ netcrop_rdpg <- function(
       call. = FALSE
     )
   }
-
-  degree_values <- if (inherits(A, "Matrix")) {
-    Matrix::rowSums(A)
-  } else {
-    rowSums(A)
+  if (effective_overlap_size <= d_max) {
+    warning(
+      "The effective overlap size is no larger than max(d_candidates); ",
+      "translated Procrustes alignment may be rank-deficient or unstable.",
+      call. = FALSE,
+      immediate. = TRUE
+    )
   }
-  rho_hat <- mean(degree_values) / (n - 1)
-  A_spectral <- A
-  raw_grid <- data.frame(
-    repetition = rep(seq_len(nrep), each = num_subnetworks),
-    split = rep(seq_len(num_subnetworks), times = nrep)
-  )
+
   candidate_grid <- expand.grid(
     candidate_id = seq_along(d_candidates),
     split = seq_len(num_subnetworks),
@@ -311,20 +308,13 @@ netcrop_rdpg <- function(
     repetition = seq_len(nrep),
     KEEP.OUT.ATTRS = FALSE
   )
-  raw_ncores <- min(ncores, nrow(raw_grid))
-  embedding_ncores <- min(ncores, nrow(candidate_grid))
-  alignment_ncores <- min(ncores, nrow(candidate_grid))
-  loss_ncores <- min(ncores, nrow(loss_grid))
-  raw_task_lookup <- matrix(
-    seq_len(nrow(raw_grid)),
-    nrow = nrep,
-    ncol = num_subnetworks,
-    byrow = TRUE
-  )
   candidate_task_lookup <- array(
     seq_len(nrow(candidate_grid)),
     dim = c(length(d_candidates), num_subnetworks, nrep)
   )
+  fit_ncores <- min(ncores, nrow(candidate_grid))
+  alignment_ncores <- min(ncores, nrow(candidate_grid))
+  loss_ncores <- min(ncores, nrow(loss_grid))
   loss_accepts_prevalidation <- vapply(
     loss_functions,
     function(fun) "validate_inputs" %in% names(formals(fun)),
@@ -334,9 +324,7 @@ netcrop_rdpg <- function(
   manage_future_plan <- TRUE
   os_type <- if (force_windows) "windows" else .Platform$OS.type
   worker_future_packages <- if (inherits(A, "Matrix")) "Matrix" else NULL
-  maximum_stage_ncores <- max(
-    raw_ncores, embedding_ncores, alignment_ncores, loss_ncores
-  )
+  maximum_stage_ncores <- max(fit_ncores, alignment_ncores, loss_ncores)
   if (os_type != "unix" && maximum_stage_ncores > 1L) {
     if (!requireNamespace("future", quietly = TRUE) ||
         !requireNamespace("future.apply", quietly = TRUE)) {
@@ -351,17 +339,12 @@ netcrop_rdpg <- function(
       unset = NA_character_
     )
     Sys.setenv(RENV_CONFIG_SYNCHRONIZED_CHECK = "FALSE")
-    on.exit(
-      try(future::plan(previous_future_plan), silent = TRUE),
-      add = TRUE
-    )
+    on.exit(try(future::plan(previous_future_plan), silent = TRUE), add = TRUE)
     on.exit({
       if (is.na(previous_renv_sync_check)) {
         Sys.unsetenv("RENV_CONFIG_SYNCHRONIZED_CHECK")
       } else {
-        Sys.setenv(
-          RENV_CONFIG_SYNCHRONIZED_CHECK = previous_renv_sync_check
-        )
+        Sys.setenv(RENV_CONFIG_SYNCHRONIZED_CHECK = previous_renv_sync_check)
       }
     }, add = TRUE)
     future::plan(future::multisession, workers = maximum_stage_ncores)
@@ -370,143 +353,126 @@ netcrop_rdpg <- function(
 
   ram_report <- NULL
   if (ram_check) {
-    decomposition_ram <- do.call(
-      estimate_spectral_decomp_ram,
-      c(
-        list(
-          n = subgraph_size,
-          p = subgraph_size,
-          K = d_max,
-          method = "eigen",
-          dense_input = !inherits(A, "sparseMatrix")
-        ),
-        resolved_eig_options[c("engine", "force_engine", "safe_d_multiplier")]
-      )
+    usvt_dimension <- min(ceiling(subgraph_size^(1 / 3)), subgraph_size)
+    initialization_ram <- max(
+      estimate_spectral_decomp_ram(
+        n = subgraph_size,
+        p = subgraph_size,
+        K = usvt_dimension,
+        method = "svd",
+        engine = "irlba",
+        nu = usvt_dimension,
+        nv = usvt_dimension,
+        dense_input = TRUE
+      )$estimated_bytes,
+      estimate_spectral_decomp_ram(
+        n = subgraph_size,
+        p = subgraph_size,
+        K = d_max,
+        method = "eigen",
+        engine = "rspectra",
+        nu = d_max,
+        nv = d_max,
+        dense_input = TRUE
+      )$estimated_bytes
     )
-    embedding_ram <- 8 * as.double(subgraph_size) * d_max
+    dense_fit_state_ram <- 1.25 * 8 * 6 * as.double(subgraph_size)^2
+    fit_product_ram <- estimate_matrix_product_ram(
+      subgraph_size,
+      d_max,
+      subgraph_size
+    )
     alignment_ram <- estimate_matrix_product_ram(
-      nrow_left = piece_size,
-      shared_dimension = d_max,
-      ncol_right = d_max
+      piece_size,
+      d_max,
+      d_max
     )
     prediction_ram <- estimate_matrix_product_ram(
-      nrow_left = piece_size,
-      shared_dimension = d_max,
-      ncol_right = piece_size
+      piece_size,
+      d_max,
+      piece_size
     )
     ram_report <- report_ram_formula(
       terms = list(
         list(
-          estimated_bytes = decomposition_ram$estimated_bytes,
+          estimated_bytes = initialization_ram + dense_fit_state_ram +
+            fit_product_ram,
           sequential_count = 1L,
-          parallel_count = raw_ncores,
-          label = "subnetwork eigendecomposition"
-        ),
-        list(
-          estimated_bytes = embedding_ram,
-          sequential_count = 1L,
-          parallel_count = embedding_ncores,
-          label = "candidate embedding"
+          parallel_count = fit_ncores,
+          label = "dense subnetwork LSM fit"
         ),
         list(
           estimated_bytes = alignment_ram,
           sequential_count = 1L,
           parallel_count = alignment_ncores,
-          label = "non-overlap rotation"
+          label = "non-overlap translated alignment"
         ),
         list(
           estimated_bytes = prediction_ram,
           sequential_count = 1L,
           parallel_count = loss_ncores,
-          label = "held-out probability product"
+          label = "held-out probability construction"
         )
       ),
-      operation = "RDPG NETCROP conservative combined preflight",
-      detail = "four sequential parallel stages; peak is overestimated additively"
+      operation = "LSM NETCROP conservative combined preflight",
+      detail = "three sequential parallel stages; peak is overestimated additively"
     )
   }
 
   if (verbose) {
     message(
-      "Stage 1/4: decomposing ", nrow(raw_grid),
-      " subnetworks with ", raw_ncores, " worker(s)."
+      "Stage 1/3: fitting ", nrow(candidate_grid),
+      " candidate subnetworks with ", fit_ncores, " worker(s)."
     )
   }
-  raw_time <- system.time({
-    raw_output <- uni_mclapply(
-      seq_len(nrow(raw_grid)),
-      function(task_id) {
-        repetition <- raw_grid$repetition[task_id]
-        split_id <- raw_grid$split[task_id]
-        nodes <- splitter$subnetworks[[repetition]][[split_id]]
-        A_subnetwork <- A_spectral[nodes, nodes, drop = FALSE]
-        decomposition <- do.call(
-          eig_decomp,
-          c(
-            list(
-              A = A_subnetwork,
-              d = d_max,
-              only_values = FALSE,
-              order_by = "magnitude",
-              validate_inputs = FALSE
-            ),
-            resolved_eig_options
-          )
-        )
-        list(
-          U = decomposition$vectors,
-          values = decomposition$values,
-          negative_eigenvalues = sum(decomposition$values < 0)
-        )
-      },
-      ncores = raw_ncores,
-      force_windows = force_windows,
-      stop_on_error = TRUE,
-      manage_future_plan = manage_future_plan,
-      future_packages = worker_future_packages
-    )
-  })
-  eigen_diagnostics <- do.call(rbind, lapply(seq_along(raw_output), function(id) {
-    data.frame(
-      repetition = raw_grid$repetition[id],
-      split = raw_grid$split[id],
-      negative_eigenvalues = raw_output[[id]]$negative_eigenvalues,
-      stringsAsFactors = FALSE
-    )
-  }))
-  if (verbose) {
-    message(
-      "Stage 2/4: constructing ", nrow(candidate_grid),
-      " candidate embeddings with ", embedding_ncores, " worker(s)."
-    )
-  }
-  embedding_time <- system.time({
-    embedding_output <- uni_mclapply(
+  fit_time <- system.time({
+    fit_output <- uni_mclapply(
       seq_len(nrow(candidate_grid)),
       function(task_id) {
         repetition <- candidate_grid$repetition[task_id]
         split_id <- candidate_grid$split[task_id]
         candidate_id <- candidate_grid$candidate_id[task_id]
         d <- d_candidates[candidate_id]
-        raw_id <- raw_task_lookup[repetition, split_id]
-        U <- raw_output[[raw_id]]$U[, seq_len(d), drop = FALSE]
-        scales <- sqrt(abs(raw_output[[raw_id]]$values[seq_len(d)]))
-        sweep(U, 2L, scales, `*`)
+        if (!is.null(seed)) {
+          task_seed <- as.integer(
+            (seed + 100000 + task_id) %% .Machine$integer.max
+          )
+          set.seed(task_seed)
+        }
+        nodes <- splitter$subnetworks[[repetition]][[split_id]]
+        A_subnetwork <- A[nodes, nodes, drop = FALSE]
+        fit <- do.call(
+          lsm_pgd,
+          c(
+            list(A = A_subnetwork, d = d, ram_check = FALSE),
+            resolved_lsm_options
+          )
+        )
+        X_hat <- fit$Z_hat
+        Z_hat <- X_hat / sqrt(2)
+        gamma_hat <- as.numeric(fit$alpha_hat) + rowSums(X_hat^2) / 2
+        list(
+          X_hat = X_hat,
+          beta_hat = as.numeric(fit$alpha_hat),
+          Z_hat = Z_hat,
+          gamma_hat = gamma_hat,
+          objective = fit$objective,
+          step_size_Z = fit$step_size_Z,
+          step_size_alpha = fit$step_size_alpha
+        )
       },
-      ncores = embedding_ncores,
+      ncores = fit_ncores,
       force_windows = force_windows,
       stop_on_error = TRUE,
       manage_future_plan = manage_future_plan,
       future_packages = worker_future_packages
     )
   })
-  if (retain_intermediates == "minimal") {
-    raw_output <- NULL
-  }
+
   if (verbose) {
     message(
-      "Stage 3/4: aligning ", nrow(candidate_grid),
-      " non-overlap embeddings with ", alignment_ncores, " worker(s)."
+      "Stage 2/3: aligning ", nrow(candidate_grid),
+      " fitted subnetworks with ", alignment_ncores, " worker(s)."
     )
   }
   alignment_time <- system.time({
@@ -516,22 +482,53 @@ netcrop_rdpg <- function(
         repetition <- candidate_grid$repetition[task_id]
         split_id <- candidate_grid$split[task_id]
         candidate_id <- candidate_grid$candidate_id[task_id]
-        X <- embedding_output[[task_id]]
-        overlap_count <- length(splitter$overlap_nodes[[repetition]])
+        fit <- fit_output[[task_id]]
+        overlap_indices <- seq_len(effective_overlap_size)
+        nonoverlap_indices <- effective_overlap_size + seq_len(piece_size)
         if (split_id == 1L) {
-          return(X[-seq_len(overlap_count), , drop = FALSE])
+          return(list(
+            Z_aligned = fit$Z_hat[nonoverlap_indices, , drop = FALSE],
+            gamma_hat = fit$gamma_hat[nonoverlap_indices],
+            rotation = diag(d_candidates[candidate_id]),
+            translation = rep(0, d_candidates[candidate_id])
+          ))
         }
         standard_id <- candidate_task_lookup[candidate_id, 1L, repetition]
-        rotation <- procrustes(
-          X = X[seq_len(overlap_count), , drop = FALSE],
-          X_star = embedding_output[[standard_id]][
-            seq_len(overlap_count), , drop = FALSE
+        alignment <- procrustes(
+          X = fit$Z_hat[overlap_indices, , drop = FALSE],
+          X_star = fit_output[[standard_id]]$Z_hat[
+            overlap_indices, , drop = FALSE
           ],
+          translate = TRUE,
+          dilate = FALSE,
           validate_inputs = FALSE
-        )$rotation
-        tcrossprod(
-          X[-seq_len(overlap_count), , drop = FALSE],
-          t(rotation)
+        )
+        Z_rotated <- tcrossprod(
+          fit$Z_hat[nonoverlap_indices, , drop = FALSE],
+          t(alignment$rotation)
+        )
+        Z_aligned <- sweep(
+          Z_rotated,
+          2L,
+          alignment$translation,
+          `+`
+        )
+
+        # The original inner-product alignment adjusted beta after translation:
+        # alpha_aligned <- fit$beta_hat[nonoverlap_indices] +
+        #   sum(alignment$translation^2) / 2 +
+        #   drop(Z_rotated %*% alignment$translation)
+
+        # After the exact distance reparameterization, gamma_i is invariant
+        # under rotation and translation, and rigid alignment preserves all
+        # pairwise distances. Therefore gamma must not be adjusted here.
+        gamma_aligned <- fit$gamma_hat[nonoverlap_indices]
+
+        list(
+          Z_aligned = Z_aligned,
+          gamma_hat = gamma_aligned,
+          rotation = alignment$rotation,
+          translation = alignment$translation
         )
       },
       ncores = alignment_ncores,
@@ -542,13 +539,13 @@ netcrop_rdpg <- function(
     )
   })
   if (retain_intermediates == "minimal") {
-    embedding_output <- NULL
+    fit_output <- NULL
   }
 
   pair_count <- nrow(pair_grid)
   if (verbose) {
     message(
-      "Stage 4/4: evaluating ", nrow(loss_grid),
+      "Stage 3/3: evaluating ", nrow(loss_grid),
       " held-out subnetwork pairs with ", loss_ncores, " worker(s)."
     )
   }
@@ -559,6 +556,7 @@ netcrop_rdpg <- function(
         repetition <- loss_grid$repetition[task_id]
         candidate_id <- loss_grid$candidate_id[task_id]
         pair_id <- loss_grid$pair_id[task_id]
+        d <- d_candidates[candidate_id]
         split_left <- pair_grid[pair_id, 1L]
         split_right <- pair_grid[pair_id, 2L]
         nodes_left <- splitter$nonoverlap_pieces[[repetition]][[split_left]]
@@ -570,40 +568,55 @@ netcrop_rdpg <- function(
         right_id <- candidate_task_lookup[
           candidate_id, split_right, repetition
         ]
-        P_hat <- tcrossprod(
-          aligned_output[[left_id]],
-          aligned_output[[right_id]]
-        )
-        P_hat <- pmax(P_hat, 1e-6)
-        P_hat <- pmin(P_hat, 1 - 1e-6)
+        left_fit <- aligned_output[[left_id]]
+        right_fit <- aligned_output[[right_id]]
+        left_norms <- rowSums(left_fit$Z_aligned^2)
+        right_norms <- rowSums(right_fit$Z_aligned^2)
+        distance_squared <- outer(left_norms, right_norms, FUN = "+") -
+          2 * tcrossprod(left_fit$Z_aligned, right_fit$Z_aligned)
+        distance_squared <- pmax(distance_squared, 0)
+        theta_hat <- outer(
+          left_fit$gamma_hat,
+          right_fit$gamma_hat,
+          FUN = "+"
+        ) - distance_squared
+        P_hat <- stats::plogis(theta_hat)
         A_test_numeric <- as.numeric(A_test)
         P_hat_numeric <- as.numeric(P_hat)
-        records <- matrix(NA_real_, nrow = length(losses), ncol = 6L)
+
+        # Preserve the pasted penalty but use d itself rather than the
+        # candidate's position in d_candidates.
+        # penalty <- 2 * (effective_overlap_size + piece_size + d)
+        penalty <- 0
+        records <- matrix(NA_real_, nrow = length(losses), ncol = 8L)
         for (loss_id in seq_along(losses)) {
           loss_name <- losses[loss_id]
           loss_arguments <- list(A_test_numeric, P_hat_numeric)
           if (loss_accepts_prevalidation[loss_id]) {
             loss_arguments$validate_inputs <- FALSE
           }
-          value <- do.call(
-            loss_functions[[loss_name]], loss_arguments
-          ) / pair_count
+          raw_loss <- do.call(loss_functions[[loss_name]], loss_arguments)
+          value <- (raw_loss + penalty) / pair_count
           if (length(value) != 1L || !is.numeric(value) ||
               is.na(value) || !is.finite(value)) {
             stop(
               "Non-finite loss for repetition ", repetition,
-              ", d = ", d_candidates[candidate_id],
+              ", d = ", d,
               ", loss = ", loss_name,
-              ", split pair = ", split_left, "-", split_right, ".",
+              ", split pair = ", split_left, "-", split_right,
+              ". For AUC-based loss, a held-out block may contain only one ",
+              "edge class.",
               call. = FALSE
             )
           }
           records[loss_id, ] <- c(
             repetition,
-            d_candidates[candidate_id],
+            d,
             loss_id,
             split_left,
             split_right,
+            as.numeric(raw_loss),
+            penalty,
             as.numeric(value)
           )
         }
@@ -627,7 +640,9 @@ netcrop_rdpg <- function(
     loss = losses[as.integer(loss_matrix[, 3L])],
     split_left = as.integer(loss_matrix[, 4L]),
     split_right = as.integer(loss_matrix[, 5L]),
-    loss_value = loss_matrix[, 6L],
+    raw_loss = loss_matrix[, 6L],
+    penalty = loss_matrix[, 7L],
+    loss_value = loss_matrix[, 8L],
     stringsAsFactors = FALSE
   )
   grouping <- interaction(
@@ -700,60 +715,50 @@ netcrop_rdpg <- function(
     unordered_test_proportion = unordered_test_proportion,
     nrep = nrep,
     losses = losses,
-    rho_hat = rho_hat,
-    eig_options = resolved_eig_options,
+    lsm_options = resolved_lsm_options,
     splitter = splitter,
-    raw_grid = raw_grid,
     candidate_grid = candidate_grid,
     loss_grid = loss_grid,
-    raw_output = if (retain_intermediates == "all") raw_output else NULL,
-    embedding_output = if (retain_intermediates == "all") {
-      embedding_output
-    } else {
-      NULL
-    },
+    fit_output = if (retain_intermediates == "all") fit_output else NULL,
     aligned_output = if (retain_intermediates == "all") {
       aligned_output
     } else {
       NULL
     },
     retain_intermediates = retain_intermediates,
-    eigen_diagnostics = eigen_diagnostics,
     ncores = list(
       requested = ncores,
-      decomposition = raw_ncores,
-      embedding = embedding_ncores,
+      fit = fit_ncores,
       alignment = alignment_ncores,
       loss = loss_ncores
     ),
     timing = c(
-      decomposition = unname(raw_time["elapsed"]),
-      embedding = unname(embedding_time["elapsed"]),
+      fit = unname(fit_time["elapsed"]),
       alignment = unname(alignment_time["elapsed"]),
       loss = unname(loss_time["elapsed"]),
       total = unname(
-        raw_time["elapsed"] + embedding_time["elapsed"] +
-          alignment_time["elapsed"] + loss_time["elapsed"]
+        fit_time["elapsed"] + alignment_time["elapsed"] +
+          loss_time["elapsed"]
       )
     ),
     ram_preflight = ram_report,
     seed = seed,
     call = call
   )
-  class(out) <- "netcrop_rdpg"
+  class(out) <- "netcrop_lsm"
   out
 }
 
-# Print the selected RDPG dimension for every requested loss.
-print.netcrop_rdpg <- function(x, ...) {
-  cat("NETCROP results for symmetric RDPG\n")
-  cat("-----------------------------------\n")
+# Print the selected LSM dimension for every requested loss.
+print.netcrop_lsm <- function(x, ...) {
+  cat("NETCROP results for latent-space models\n")
+  cat("---------------------------------------\n")
   print(x$overall_best, row.names = FALSE)
   invisible(x)
 }
 
-# Summarize a symmetric-RDPG NETCROP fit.
-summary.netcrop_rdpg <- function(object, ...) {
+# Summarize an LSM NETCROP fit.
+summary.netcrop_lsm <- function(object, ...) {
   result <- list(
     call = object$call,
     d_candidates = object$d_candidates,
@@ -763,23 +768,20 @@ summary.netcrop_rdpg <- function(object, ...) {
     effective_overlap_size = object$effective_overlap_size,
     piece_size = object$piece_size,
     unordered_test_proportion = object$unordered_test_proportion,
-    rho_hat = object$rho_hat,
     best_dimension_cv = object$best_dimension_cv,
     overall_best = object$overall_best,
-    negative_eigenvalues = sum(
-      object$eigen_diagnostics$negative_eigenvalues
-    ),
+    lsm_options = object$lsm_options,
     ncores = object$ncores,
     timing = object$timing
   )
-  class(result) <- "summary.netcrop_rdpg"
+  class(result) <- "summary.netcrop_lsm"
   result
 }
 
-# Print a symmetric-RDPG NETCROP summary.
-print.summary.netcrop_rdpg <- function(x, ...) {
-  cat("Summary of NETCROP symmetric-RDPG dimension selection\n")
-  cat("----------------------------------------------------\n")
+# Print an LSM NETCROP summary.
+print.summary.netcrop_lsm <- function(x, ...) {
+  cat("Summary of NETCROP latent-space-model dimension selection\n")
+  cat("---------------------------------------------------------\n")
   cat("Candidate d:", paste(x$d_candidates, collapse = ", "), "\n")
   cat("Repetitions:", x$nrep, "\n")
   cat("Subnetworks per repetition:", x$num_subnetworks, "\n")
@@ -793,15 +795,10 @@ print.summary.netcrop_rdpg <- function(x, ...) {
     "\n"
   )
   cat("Non-overlap piece size:", x$piece_size, "\n")
-  cat(sprintf("Estimated sparsity rho_hat: %.6g\n", x$rho_hat))
   cat(sprintf(
     "Held-out unordered-pair proportion: %.2f%%\n",
     100 * x$unordered_test_proportion
   ))
-  cat(
-    "Negative retained eigenvalues across decompositions:",
-    x$negative_eigenvalues, "\n"
-  )
   cat("Best dimensions per repetition:\n")
   print(x$best_dimension_cv, row.names = FALSE)
   cat("Overall best dimensions:\n")
@@ -811,8 +808,8 @@ print.summary.netcrop_rdpg <- function(x, ...) {
   invisible(x)
 }
 
-# Plot RDPG CV loss curves, optionally aggregating across repetitions.
-plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
+# Plot LSM CV loss curves, optionally aggregating across repetitions.
+plot.netcrop_lsm <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
   }
@@ -838,9 +835,9 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
         ggplot2::scale_x_continuous(breaks = d_breaks) +
         ggplot2::facet_wrap(~loss, scales = "free_y") +
         ggplot2::labs(
-          title = "NETCROP CV loss by RDPG dimension",
+          title = "NETCROP CV loss by LSM dimension",
           x = "Latent dimension (d)",
-          y = "Average CV loss",
+          y = "Penalized average CV loss",
           color = "Repetition"
         ) +
         ggplot2::theme_minimal() +
@@ -855,9 +852,7 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
   )
   plot_data <- do.call(rbind, lapply(split(x$cv_loss, grouping), function(z) {
     standard_deviation <- stats::sd(z$average_loss)
-    if (is.na(standard_deviation)) {
-      standard_deviation <- 0
-    }
+    if (is.na(standard_deviation)) standard_deviation <- 0
     data.frame(
       d = z$d[1L],
       loss = z$loss[1L],
@@ -883,37 +878,36 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
     ggplot2::scale_x_continuous(breaks = d_breaks) +
     ggplot2::facet_wrap(~loss, scales = "free_y") +
     ggplot2::labs(
-      title = "NETCROP CV loss by RDPG dimension",
+      title = "NETCROP CV loss by LSM dimension",
       x = "Latent dimension (d)",
-      y = "Mean CV loss (plus or minus one SD)"
+      y = "Mean penalized CV loss (plus or minus one SD)"
     ) +
     ggplot2::theme_minimal()
 }
 
+
+
+########
+# library(Matrix)
 # system.time(
-#   net <- generate_rdpg(
-#     n = 10000, d = 10, ncores = 5
+#   net <- generate_lsm(
+#     n = 1e3, d = 2, alpha = 0
 #   )
 # )
 #
-# # system.time(
-# #   net <- RDPG.gen(n = 10000, d = 10, X = NULL, rho = 0.65,
-# #                   ncore = 5)$A
-# # )
-#
 # system.time(
-#   rdpg_out <- netcrop_rdpg(
+#   nc.out <- netcrop_lsm(
 #     A = net,
-#     d_candidates = 1:20,
-#     num_subnetworks = 3L,
-#     overlap_size = 8002L,
+#     d_candidates = 1:5,
+#     num_subnetworks = NULL,
+#     overlap_size = NULL,
 #     nrep = 1L,
-#     losses = "bin_dev",
-#     ncores = 5L,
-#     verbose = TRUE,
-#     ram_check = FALSE
+#     lsm_options = list(niter = 100L),
+#     losses = "sse",
+#     ncores = 8L,
+#     force_windows = FALSE
 #   )
 # )
-# rdpg_out
-# summary(rdpg_out)
-# plot(rdpg_out)
+# nc.out
+# summary(nc.out)
+# plot(nc.out)

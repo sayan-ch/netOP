@@ -3,14 +3,14 @@
 # This file preserves the original three-stage algorithm: obtain subnetwork
 # spectral labels, estimate block-model parameters, and evaluate every pair of
 # non-overlap pieces. Source 01_basic_helpers.R through 06_estimators.R and
-# x1_sonnet.R and xx_helpers.R before this file.
+# x0_helpers.R and x1_sonnet.R before this file.
 
 # Select an SBM or DCBM and number of communities by overlapping-subnetwork CV.
 netcrop_blockmodel <- function(
     A,
     K_candidates,
-    num_subnetworks,
-    overlap_size,
+    num_subnetworks = NULL,
+    overlap_size = NULL,
     nrep = 1L,
     losses = c("sse", "bin_dev", "auc_as_loss"),
     model_candidates = c("SBM", "DCBM"),
@@ -24,15 +24,17 @@ netcrop_blockmodel <- function(
       na.rm = TRUE
     ),
     seed = NULL,
-    verbose = FALSE,
+    verbose = TRUE,
     force_windows = FALSE,
-    ram_check = TRUE,
+    ram_check = FALSE,
+    parameter_select_options = list(),
     retain_intermediates = c("all", "minimal")) {
   call <- match.call()
   matching_method <- match.arg(matching_method)
   retain_intermediates <- match.arg(retain_intermediates)
   required_helpers <- c(
-    "uni_mclapply", "netcrop_splitter", "is_symmetric_matrix", "eig_decomp",
+    "uni_mclapply", "netcrop_param_select", "netcrop_splitter",
+    "is_symmetric_matrix", "eig_decomp",
     "singular_decomp", "graph_laplacian", "spectral_cluster",
     "estimate_sbm", "estimate_dcbm", "label_match_greedy",
     "label_match_brute_force", "clip_probabilities", "modal"
@@ -46,7 +48,7 @@ netcrop_blockmodel <- function(
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files, x1_sonnet.R, and xx_helpers.R ",
+      "Source the numbered helper files, x0_helpers.R, and x1_sonnet.R ",
       "before x2_netcrop_bm.R. Missing: ",
       paste(missing_helpers, collapse = ", "),
       ".",
@@ -121,14 +123,52 @@ netcrop_blockmodel <- function(
   }
   input_was_sparse <- inherits(A, "sparseMatrix")
   n <- nrow(A)
+  nrep <- validate_count(nrep, "nrep", minimum = 1L)
+  ncores <- validate_count(ncores, "ncores", minimum = 1L)
+  if (is.null(num_subnetworks) || is.null(overlap_size)) {
+    validate_named_list(parameter_select_options, "parameter_select_options")
+    if ("n" %in% names(parameter_select_options)) {
+      stop("parameter_select_options cannot override n.", call. = FALSE)
+    }
+    unknown_parameter_options <- setdiff(
+      names(parameter_select_options),
+      names(formals(netcrop_param_select))
+    )
+    if (length(unknown_parameter_options) > 0L) {
+      stop(
+        "parameter_select_options contains unsupported component(s): ",
+        paste(unknown_parameter_options, collapse = ", "),
+        ".",
+        call. = FALSE
+      )
+    }
+    selected_parameters <- do.call(
+      netcrop_param_select,
+      utils::modifyList(
+        list(test_prop = 0.02, n = n, o_range = 0),
+        parameter_select_options,
+        keep.null = TRUE
+      )
+    )
+    if (nrow(selected_parameters) != 1L) {
+      stop(
+        "parameter_select_options must select exactly one NETCROP pair.",
+        call. = FALSE
+      )
+    }
+    if (is.null(num_subnetworks)) {
+      num_subnetworks <- selected_parameters$num_subnetworks[[1L]]
+    }
+    if (is.null(overlap_size)) {
+      overlap_size <- selected_parameters$overlap_size[[1L]]
+    }
+  }
   num_subnetworks <- validate_count(
     num_subnetworks,
     "num_subnetworks",
     minimum = 2L
   )
   overlap_size <- validate_count(overlap_size, "overlap_size", minimum = 1L)
-  nrep <- validate_count(nrep, "nrep", minimum = 1L)
-  ncores <- validate_count(ncores, "ncores", minimum = 1L)
   verbose <- validate_flag(verbose, "verbose")
   force_windows <- validate_flag(force_windows, "force_windows")
   ram_check <- validate_flag(ram_check, "ram_check")

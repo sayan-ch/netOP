@@ -1,300 +1,4 @@
-# SONNET overlap-partition helpers
-
-# Generate repeated overlap-plus-partition node subsets.
-#
-# For each repetition, sample common overlap nodes and partition the rest. When
-# s * m is smaller than n - o, the default augments the overlap with all
-# remainder nodes. Alternatively, extras can be balanced randomly across the
-# non-overlap pieces or, with a warning, ignored.
-op_splitter <- function(
-    n,
-    s,
-    o,
-    n_repetitions = 1L,
-    m = floor((n - o) / s),
-    remainder_handling = c(
-      "augment_overlap",
-      "distribute_randomly",
-      "ignore"
-    ),
-    seed = NULL) {
-  remainder_handling <- match.arg(remainder_handling)
-  count_inputs <- list(
-    n = n,
-    s = s,
-    o = o,
-    n_repetitions = n_repetitions,
-    m = m
-  )
-  invalid_count <- vapply(
-    count_inputs,
-    function(value) {
-      length(value) != 1L ||
-        !is.numeric(value) ||
-        is.na(value) ||
-        !is.finite(value) ||
-        value < 0 ||
-        value != floor(value)
-    },
-    logical(1)
-  )
-  invalid_count[c("n", "s", "n_repetitions")] <-
-    invalid_count[c("n", "s", "n_repetitions")] |
-    unlist(count_inputs[c("n", "s", "n_repetitions")]) < 1
-  if (any(invalid_count)) {
-    stop(
-      paste(names(count_inputs)[invalid_count], collapse = ", "),
-      " must be valid integer counts; n, s, and n_repetitions must be positive.",
-      call. = FALSE
-    )
-  }
-  n <- as.integer(n)
-  s <- as.integer(s)
-  o <- as.integer(o)
-  n_repetitions <- as.integer(n_repetitions)
-  m <- as.integer(m)
-  if (o > n) {
-    stop("o cannot exceed n.", call. = FALSE)
-  }
-  if (as.double(s) * m > n - o) {
-    stop("s * m cannot exceed n - o.", call. = FALSE)
-  }
-  remainder_count <- n - o - s * m
-  o_updated <- if (remainder_handling == "augment_overlap") {
-    o + remainder_count
-  } else {
-    o
-  }
-  if (remainder_handling == "ignore" && remainder_count > 0L) {
-    warning(
-      remainder_count,
-      " node(s) will be ignored in each repetition; this is not recommended.",
-      call. = FALSE,
-      immediate. = TRUE
-    )
-  }
-  if (!is.null(seed)) {
-    if (length(seed) != 1L ||
-        !is.numeric(seed) ||
-        is.na(seed) ||
-        !is.finite(seed) ||
-        seed < 0 ||
-        seed != floor(seed) ||
-        seed > .Machine$integer.max) {
-      stop(
-        "seed must be NULL or an integer from 0 to .Machine$integer.max.",
-        call. = FALSE
-      )
-    }
-    seed <- as.double(seed)
-  }
-  
-  node_ids <- seq_len(n)
-  repetitions <- lapply(seq_len(n_repetitions), function(repetition) {
-    if (!is.null(seed)) {
-      repetition_seed <- as.integer(
-        (seed + repetition - 1) %% .Machine$integer.max
-      )
-      set.seed(repetition_seed)
-    }
-    overlap_nodes <- if (o == 0L) {
-      integer(0)
-    } else {
-      sample(node_ids, size = o, replace = FALSE)
-    }
-    nonoverlap_pool <- setdiff(node_ids, overlap_nodes)
-    ordered_nonoverlap <- if (length(nonoverlap_pool) == 0L) {
-      integer(0)
-    } else {
-      sample(nonoverlap_pool, size = length(nonoverlap_pool), replace = FALSE)
-    }
-    selected_count <- s * m
-    split_extras <- replicate(s, integer(0), simplify = FALSE)
-    
-    if (remainder_handling == "augment_overlap") {
-      additional_overlap <- if (remainder_count == 0L) {
-        integer(0)
-      } else {
-        ordered_nonoverlap[seq_len(remainder_count)]
-      }
-      overlap_nodes <- c(overlap_nodes, additional_overlap)
-      selected_nonoverlap <- if (selected_count == 0L) {
-        integer(0)
-      } else {
-        start <- remainder_count + 1L
-        ordered_nonoverlap[start + seq_len(selected_count) - 1L]
-      }
-    } else {
-      selected_nonoverlap <- if (selected_count == 0L) {
-        integer(0)
-      } else {
-        ordered_nonoverlap[seq_len(selected_count)]
-      }
-    }
-    
-    if (remainder_handling == "distribute_randomly" &&
-        remainder_count > 0L) {
-      remaining_nodes <- ordered_nonoverlap[
-        selected_count + seq_len(remainder_count)
-      ]
-      extra_counts <- rep.int(remainder_count %/% s, s)
-      bonus_count <- remainder_count %% s
-      if (bonus_count > 0L) {
-        bonus_splits <- sample.int(s, size = bonus_count, replace = FALSE)
-        extra_counts[bonus_splits] <- extra_counts[bonus_splits] + 1L
-      }
-      cursor <- 1L
-      for (split_id in seq_len(s)) {
-        count <- extra_counts[split_id]
-        if (count > 0L) {
-          split_extras[[split_id]] <- remaining_nodes[
-            cursor + seq_len(count) - 1L
-          ]
-          cursor <- cursor + count
-        }
-      }
-    }
-    
-    splits <- lapply(seq_len(s), function(split_id) {
-      split_nonoverlap <- if (m == 0L) {
-        integer(0)
-      } else {
-        first <- (split_id - 1L) * m + 1L
-        last <- split_id * m
-        selected_nonoverlap[first:last]
-      }
-      c(overlap_nodes, split_nonoverlap, split_extras[[split_id]])
-    })
-    names(splits) <- paste0("split_", seq_len(s))
-    splits
-  })
-  names(repetitions) <- paste0("repetition_", seq_len(n_repetitions))
-  list(
-    splits = repetitions,
-    o = o_updated,
-    remainder_count = remainder_count,
-    remainder_handling = remainder_handling
-  )
-}
-
-# Generate SONNET partitions with one overlap shared across all repetitions.
-#
-# Remainder nodes always augment the shared overlap. The first repetition's
-# subnetworks include that overlap; extra repetitions contain only freshly
-# permuted non-overlap pieces, matching the original SONNET flow.
-sonnet_splitter <- function(
-    n,
-    num_subnetworks,
-    overlap_size,
-    extra_nrep = 0L,
-    m = floor((n - overlap_size) / num_subnetworks),
-    seed = NULL) {
-  if (length(extra_nrep) != 1L ||
-      !is.numeric(extra_nrep) ||
-      is.na(extra_nrep) ||
-      !is.finite(extra_nrep) ||
-      extra_nrep < 0 ||
-      extra_nrep != floor(extra_nrep)) {
-    stop("extra_nrep must be one non-negative integer.", call. = FALSE)
-  }
-  extra_nrep <- as.integer(extra_nrep)
-  first_split <- op_splitter(
-    n = n,
-    s = num_subnetworks,
-    o = overlap_size,
-    n_repetitions = 1L,
-    m = m,
-    remainder_handling = "augment_overlap",
-    seed = seed
-  )
-  first_subnetworks <- first_split$splits[[1L]]
-  overlap_nodes <- Reduce(intersect, first_subnetworks)
-  nonoverlap_nodes <- setdiff(seq_len(n), overlap_nodes)
-  subnetworks <- vector("list", extra_nrep + 1L)
-  subnetworks[[1L]] <- first_subnetworks
-  
-  if (extra_nrep > 0L) {
-    for (repetition in seq_len(extra_nrep)) {
-      if (!is.null(seed)) {
-        repetition_seed <- as.integer(
-          (as.double(seed) + repetition) %% .Machine$integer.max
-        )
-        set.seed(repetition_seed)
-      }
-      ordered_nodes <- if (length(nonoverlap_nodes) == 0L) {
-        integer(0)
-      } else {
-        sample(
-          nonoverlap_nodes,
-          size = length(nonoverlap_nodes),
-          replace = FALSE
-        )
-      }
-      pieces <- lapply(seq_len(num_subnetworks), function(split_id) {
-        if (m == 0L) {
-          return(integer(0))
-        }
-        first <- (split_id - 1L) * m + 1L
-        last <- split_id * m
-        ordered_nodes[first:last]
-      })
-      names(pieces) <- paste0("split_", seq_len(num_subnetworks))
-      subnetworks[[repetition + 1L]] <- pieces
-    }
-  }
-  names(subnetworks) <- paste0(
-    "repetition_",
-    seq_len(extra_nrep + 1L)
-  )
-  list(
-    subnetworks = subnetworks,
-    overlap_nodes = overlap_nodes,
-    nonoverlap_nodes = nonoverlap_nodes,
-    overlap_size = length(overlap_nodes),
-    requested_overlap_size = as.integer(overlap_size),
-    remainder_count = first_split$remainder_count,
-    m = as.integer(m),
-    remainder_handling = "augment_overlap"
-  )
-}
-
-# Generate SONNET partitions with independently sampled overlap per repetition.
-#
-# Remainder nodes augment the overlap in every repetition, so every node is
-# represented and every repetition produces a complete labeling.
-sonnet_splitter_independent <- function(
-    n,
-    num_subnetworks,
-    overlap_size,
-    extra_nrep = 0L,
-    m = floor((n - overlap_size) / num_subnetworks),
-    seed = NULL) {
-  split <- op_splitter(
-    n = n,
-    s = num_subnetworks,
-    o = overlap_size,
-    n_repetitions = extra_nrep + 1L,
-    m = m,
-    remainder_handling = "augment_overlap",
-    seed = seed
-  )
-  overlap_nodes <- lapply(split$splits, function(subnetworks) {
-    Reduce(intersect, subnetworks)
-  })
-  nonoverlap_nodes <- lapply(overlap_nodes, function(overlap) {
-    setdiff(seq_len(n), overlap)
-  })
-  list(
-    subnetworks = split$splits,
-    overlap_nodes = overlap_nodes,
-    nonoverlap_nodes = nonoverlap_nodes,
-    overlap_size = split$o,
-    requested_overlap_size = as.integer(overlap_size),
-    remainder_count = split$remainder_count,
-    m = as.integer(m),
-    remainder_handling = "augment_overlap"
-  )
-}
+# SONNET fitting and S3 methods
 
 # Fit SONNET using overlapping subnetwork spectral clusterings.
 #
@@ -305,8 +9,8 @@ sonnet_splitter_independent <- function(
 .sonnet_fit <- function(
     A,
     K,
-    num_subnetworks,
-    overlap_size,
+    num_subnetworks = NULL,
+    overlap_size = NULL,
     extra_nrep = 0L,
     ncores = max(
       floor(parallel::detectCores() / 2),
@@ -316,10 +20,11 @@ sonnet_splitter_independent <- function(
     seed = NULL,
     matching_method = c("greedy", "hungarian", "brute_force"),
     confirm_large = TRUE,
-    verbose = FALSE,
+    verbose = TRUE,
     force_windows = FALSE,
-    ram_check = TRUE,
+    ram_check = FALSE,
     share_overlap = TRUE,
+    parameter_select_options = list(),
     ...) {
   call <- match.call()
   matching_method <- match.arg(matching_method)
@@ -328,7 +33,10 @@ sonnet_splitter_independent <- function(
     "spectral_cluster",
     "label_match_greedy",
     "label_match_brute_force",
-    "modal"
+    "modal",
+    "sonnet_param_select",
+    "sonnet_splitter",
+    "sonnet_splitter_independent"
   )
   missing_helpers <- required_helpers[!vapply(
     required_helpers,
@@ -339,8 +47,8 @@ sonnet_splitter_independent <- function(
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source 01_basic_helpers.R, 02_math_helpers.R, 05_embedders.R, and ",
-      "06_estimators.R before calling sonnet(). Missing: ",
+      "Source 01_basic_helpers.R, 02_math_helpers.R, 05_embedders.R, ",
+      "06_estimators.R and x0_helpers.R before calling sonnet(). Missing: ",
       paste(missing_helpers, collapse = ", "),
       ".",
       call. = FALSE
@@ -355,6 +63,52 @@ sonnet_splitter_independent <- function(
     stop("A must be a non-empty finite square numeric matrix.", call. = FALSE)
   }
   n <- nrow(A)
+  if (is.null(num_subnetworks) || is.null(overlap_size)) {
+    if (!is.list(parameter_select_options) ||
+        (length(parameter_select_options) > 0L &&
+         (is.null(names(parameter_select_options)) ||
+          any(!nzchar(names(parameter_select_options)))))) {
+      stop("parameter_select_options must be a named list.", call. = FALSE)
+    }
+    protected_parameter_options <- intersect(
+      names(parameter_select_options),
+      c("n", "K", "ncores")
+    )
+    if (length(protected_parameter_options) > 0L) {
+      stop(
+        "parameter_select_options cannot override ",
+        paste(protected_parameter_options, collapse = ", "),
+        ".",
+        call. = FALSE
+      )
+    }
+    unknown_parameter_options <- setdiff(
+      names(parameter_select_options),
+      names(formals(sonnet_param_select))
+    )
+    if (length(unknown_parameter_options) > 0L) {
+      stop(
+        "parameter_select_options contains unsupported component(s): ",
+        paste(unknown_parameter_options, collapse = ", "),
+        ".",
+        call. = FALSE
+      )
+    }
+    selected_parameters <- do.call(
+      sonnet_param_select,
+      utils::modifyList(
+        list(n = n, K = K, theta = 3, q = 0.005, ncores = ncores),
+        parameter_select_options,
+        keep.null = TRUE
+      )
+    )
+    if (is.null(num_subnetworks)) {
+      num_subnetworks <- selected_parameters$num_subnetworks
+    }
+    if (is.null(overlap_size)) {
+      overlap_size <- selected_parameters$overlap_size
+    }
+  }
   integer_inputs <- list(
     K = K,
     num_subnetworks = num_subnetworks,
@@ -1225,8 +979,8 @@ sonnet_independent_overlap <- function(...) {
 sonnet <- function(
     A,
     K,
-    num_subnetworks,
-    overlap_size,
+    num_subnetworks = NULL,
+    overlap_size = NULL,
     extra_nrep = 0L,
     ncores = max(
       floor(parallel::detectCores() / 2),
@@ -1236,10 +990,11 @@ sonnet <- function(
     seed = NULL,
     matching_method = c("greedy", "hungarian", "brute_force"),
     confirm_large = TRUE,
-    verbose = FALSE,
+    verbose = TRUE,
     force_windows = FALSE,
-    ram_check = TRUE,
+    ram_check = FALSE,
     share_overlap = FALSE,
+    parameter_select_options = list(),
     ...) {
   result <- .sonnet_fit(
     A = A,
@@ -1255,6 +1010,7 @@ sonnet <- function(
     force_windows = force_windows,
     ram_check = ram_check,
     share_overlap = share_overlap,
+    parameter_select_options = parameter_select_options,
     ...
   )
   result$call <- match.call()

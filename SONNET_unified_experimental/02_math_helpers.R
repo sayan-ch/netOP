@@ -69,6 +69,61 @@ mae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   mean(abs(x - y), na.rm = na_rm)
 }
 
+# Compute empirical mutual information normalized by joint entropy.
+#
+# This preserves the requested normalization MI(g_1, g_2) / H(g_1, g_2),
+# which differs from normalizations based on the two marginal entropies. Use
+# entropy when it is installed; otherwise compute the same empirical plug-in
+# quantities directly. A constant joint labeling has zero entropy, making the
+# normalized value undefined, and returns NaN.
+nmi <- function(g_1, g_2) {
+  if (!is.atomic(g_1) || !is.null(dim(g_1)) ||
+      !is.atomic(g_2) || !is.null(dim(g_2))) {
+    stop("g_1 and g_2 must be atomic vectors.", call. = FALSE)
+  }
+  if (length(g_1) != length(g_2)) {
+    stop("g_1 and g_2 must have equal lengths.", call. = FALSE)
+  }
+  if (length(g_1) == 0L) {
+    stop("g_1 and g_2 must not be empty.", call. = FALSE)
+  }
+  if (anyNA(g_1) || anyNA(g_2)) {
+    stop("g_1 and g_2 must not contain missing values.", call. = FALSE)
+  }
+
+  cross_table <- table(g_1, g_2)
+  if (requireNamespace("entropy", quietly = TRUE)) {
+    mutual_information <- entropy::mi.empirical(
+      as.matrix(cross_table)
+    )
+    joint_entropy <- entropy::entropy.empirical(
+      as.vector(cross_table)
+    )
+  } else {
+    joint_probabilities <- as.numeric(cross_table) / sum(cross_table)
+    positive_joint <- joint_probabilities > 0
+    joint_entropy <- -sum(
+      joint_probabilities[positive_joint] *
+        log(joint_probabilities[positive_joint])
+    )
+    row_probabilities <- rowSums(cross_table) / sum(cross_table)
+    column_probabilities <- colSums(cross_table) / sum(cross_table)
+    expected_probabilities <- tcrossprod(
+      row_probabilities,
+      column_probabilities
+    )
+    mutual_information <- sum(
+      joint_probabilities[positive_joint] * log(
+        joint_probabilities[positive_joint] /
+          expected_probabilities[positive_joint]
+      )
+    )
+  }
+
+  if (joint_entropy == 0) return(NaN)
+  as.numeric(mutual_information / joint_entropy)
+}
+
 # Clip every value in a numeric vector or matrix to inclusive lower/upper bounds.
 #
 # Missing values remain missing. Infinite values are replaced when the

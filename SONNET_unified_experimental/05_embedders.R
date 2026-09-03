@@ -22,7 +22,7 @@ ase <- function(
     directed = FALSE,
     reconstruct = FALSE,
     align_with = NULL,
-    ram_check = TRUE) {
+    ram_check = FALSE) {
   if (!exists("eig_decomp", mode = "function", inherits = TRUE) ||
       !exists("singular_decomp", mode = "function", inherits = TRUE) ||
       !exists("procrustes", mode = "function", inherits = TRUE)) {
@@ -312,7 +312,7 @@ spectral_cluster <- function(
     spectral_options = list(),
     cluster_engine = c("clara", "kmeans", "pam"),
     cluster_options = list(),
-    ram_check = TRUE,
+    ram_check = FALSE,
     validate_inputs = TRUE) {
   ram_check_missing <- missing(ram_check)
   handle_zero_degree_nodes <- match.arg(handle_zero_degree_nodes)
@@ -818,13 +818,13 @@ lsm_pgd <- function(
     A,
     d,
     step_size = 0.3,
-    niter = 500L,
+    niter = 100L,
     trace = FALSE,
     Z_init = NULL,
     alpha_init = NULL,
     epsilon = 1e-6,
     use_cpp = TRUE,
-    ram_check = TRUE) {
+    ram_check = FALSE) {
   required_helpers <- c(
     "usvt",
     "clip_probabilities",

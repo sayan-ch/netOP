@@ -584,7 +584,7 @@ scale_to_average_degree_naive <- function(
 apply_average_degree_scaling <- function(
     P,
     average_degree,
-    average_degree_method,
+    average_degree_method = "naive",
     self_loops,
     lower_clip,
     upper_clip) {
@@ -899,9 +899,9 @@ generate_rdpg <- function(
     latent_distribution = stats::runif,
     latent_args = NULL,
     sparsity_multiplier = 1,
-    scale_P = FALSE,
+    scale_P = TRUE,
     average_degree = NULL,
-    average_degree_method = c("calibrated", "naive"),
+    average_degree_method = c("naive", "calibrated"),
     lower_clip = 0,
     upper_clip = 1,
     representation = c("sparse", "dense"),
@@ -925,6 +925,11 @@ generate_rdpg <- function(
       sparsity_multiplier < 0) {
     stop("sparsity_multiplier must be one nonnegative number.", call. = FALSE)
   }
+  latent_distribution <- match.fun(latent_distribution)
+  if (is.null(latent_args) &&
+      identical(latent_distribution, stats::runif)) {
+    latent_args <- list(min = 0, max = 1)
+  }
 
   if (!directed) {
     if (!is.null(Z_left) || !is.null(Z_right)) {
@@ -941,7 +946,7 @@ generate_rdpg <- function(
     )
     n <- nrow(Z)
     d <- ncol(Z)
-    P <- sparsity_multiplier * tcrossprod(Z)
+    P <- tcrossprod(Z)
     parameters <- list(Z = Z)
   } else {
     if (!is.null(Z)) {
@@ -971,7 +976,7 @@ generate_rdpg <- function(
     )
     n <- nrow(Z_left)
     d <- ncol(Z_left)
-    P <- sparsity_multiplier * tcrossprod(Z_left, Z_right)
+    P <- tcrossprod(Z_left, Z_right)
     parameters <- list(Z_left = Z_left, Z_right = Z_right)
   }
 
@@ -981,6 +986,7 @@ generate_rdpg <- function(
       P <- P / maximum_probability
     }
   }
+  P <- sparsity_multiplier * P
   if (is.null(average_degree)) {
     P <- clip_generator_probabilities(P, lower_clip, upper_clip)
     if (!self_loops) diag(P) <- 0
@@ -1062,6 +1068,8 @@ generate_community_labels <- function(
   }
   n <- validate_generator_count(n, "n")
   K <- validate_generator_count(K, "K")
+  # Match the historical SBM/DCBM default: sample labels uniformly when no
+  # community proportions are supplied.
   if (is.null(community_probabilities)) {
     community_probabilities <- rep(1 / K, K)
   }
@@ -1085,11 +1093,27 @@ generate_community_labels <- function(
              prob = community_probabilities)
 }
 
+# Generate the historical default DCBM degree parameters.
+generate_inverse_beta_degree_parameters <- function(
+    n,
+    shape_1 = 4,
+    shape_2 = 1) {
+  n <- validate_generator_count(n, "n", allow_zero = TRUE)
+  shape_parameters <- c(shape_1 = shape_1, shape_2 = shape_2)
+  if (anyNA(shape_parameters) ||
+      any(!is.finite(shape_parameters)) ||
+      any(shape_parameters <= 0)) {
+    stop("shape_1 and shape_2 must be positive finite values.",
+         call. = FALSE)
+  }
+  1 / stats::rbeta(n, shape1 = shape_1, shape2 = shape_2)
+}
+
 # Generate or validate nonnegative DCBM degree parameters.
 generate_degree_parameters <- function(
     n = NULL,
     psi = NULL,
-    degree_distribution = stats::runif,
+    degree_distribution = generate_inverse_beta_degree_parameters,
     degree_args = NULL,
     degree_scale = c("none", "max_by_community", "mean_one_by_community"),
     g_true = NULL,
@@ -1174,12 +1198,12 @@ generate_dcbm <- function(
     alpha = 0.2,
     beta = 0.2,
     psi = NULL,
-    degree_distribution = stats::runif,
+    degree_distribution = generate_inverse_beta_degree_parameters,
     degree_args = NULL,
     degree_scale = c("none", "max_by_community", "mean_one_by_community"),
     sparsity_multiplier = 1,
     average_degree = NULL,
-    average_degree_method = c("calibrated", "naive"),
+    average_degree_method = c("naive", "calibrated"),
     lower_clip = 0,
     upper_clip = 1,
     representation = c("sparse", "dense"),
@@ -1323,7 +1347,7 @@ generate_sbm <- function(
     beta = 0.2,
     sparsity_multiplier = 1,
     average_degree = NULL,
-    average_degree_method = c("calibrated", "naive"),
+    average_degree_method = c("naive", "calibrated"),
     lower_clip = 0,
     upper_clip = 1,
     representation = c("sparse", "dense"),
@@ -1472,7 +1496,7 @@ generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
 scale_lsm_to_average_degree <- function(
     theta,
     average_degree,
-    average_degree_method = c("calibrated", "naive"),
+    average_degree_method = c("naive", "calibrated"),
     self_loops = FALSE,
     lower_clip = 0,
     upper_clip = 1,
@@ -1580,9 +1604,11 @@ scale_lsm_to_average_degree <- function(
 #
 # Undirected models use Z. Directed models use Z_left and Z_right. Missing
 # latent positions, community labels, and alpha are generated. A supplied
-# scalar alpha is recycled to all nodes. With distance_adjustment = TRUE, the
-# squared-norm correction yields the distance-model identity
-# alpha - ||Z_i - Z_j||^2 / 2 in the scalar undirected case.
+# scalar alpha is recycled to all nodes. With distance_adjustment = TRUE, each
+# half-intercept is reduced by the corresponding squared row norm and the
+# latent cross-product is doubled. In the undirected scalar-alpha case this is
+# exactly alpha - ||Z_i - Z_j||^2; vector alpha gives its node-intercept
+# generalization.
 generate_lsm <- function(
     n = NULL,
     d = NULL,
@@ -1600,7 +1626,7 @@ generate_lsm <- function(
     noise_lower = -2,
     noise_upper = 2,
     average_degree = NULL,
-    average_degree_method = c("calibrated", "naive"),
+    average_degree_method = c("naive", "calibrated"),
     naive_iterations = 10L,
     lower_clip = 0,
     upper_clip = 1,
@@ -1729,10 +1755,13 @@ generate_lsm <- function(
   alpha_left <- alpha / 2
   alpha_right <- alpha / 2
   if (distance_adjustment) {
-    alpha_left <- alpha_left - rowSums(Z_left^2) / 2
-    alpha_right <- alpha_right - rowSums(Z_right^2) / 2
+    # alpha_left <- alpha_left - sqrt(rowSums(Z_left^2)) / 2
+    # alpha_right <- alpha_right - sqrt(rowSums(Z_right^2)) / 2
+    alpha_left <- alpha_left - rowSums(Z_left^2)
+    alpha_right <- alpha_right - rowSums(Z_right^2)
   }
-  theta <- tcrossprod(Z_left, Z_right)
+  # theta <- tcrossprod(Z_left, Z_right)
+  theta <- 2 * tcrossprod(Z_left, Z_right)
   theta <- sweep(theta, 1L, alpha_left, `+`)
   theta <- sweep(theta, 2L, alpha_right, `+`)
 

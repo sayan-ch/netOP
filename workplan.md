@@ -46,6 +46,9 @@ exhaustive API and security audit and accepts the additional latency. Reserve
   where it can be done systematically and safely; do not perform isolated
   reorderings that leave related functions inconsistent.
 - The remote repository is `https://github.com/sayan-ch/netOP.git`.
+- Use the initial GitHub repository description:
+  `Network analysis and model selection tools for R.` The owner may replace it
+  with a more detailed description later.
 - Continue implementation directly on `main`; use small, coherent commits and
   push each validated checkpoint to `origin/main`. Never force-push.
 - The initial distribution target is GitHub. Prepare for, but do not submit to,
@@ -132,6 +135,31 @@ work, not as damage to be reverted.
 Do not begin restructuring until this baseline push succeeds. If branch
 protection prevents a direct push, stop and ask whether to create a branch and
 pull request instead.
+
+## Phase 0.5: Prepare the package-development environment
+
+Install or update only tools and packages required for netOP; do not perform an
+unscoped upgrade of every R package or system package on the machine.
+
+1. Inventory and record versions of R, Git, `make`, C/C++ compilers, Fortran,
+   Pandoc, qpdf, and the active R library paths.
+2. Ensure the local toolchain includes Git, Apple/Xcode command-line build
+   tools, `make`, Clang, a compatible Fortran compiler, Pandoc, and qpdf.
+3. Ensure the R development stack includes `Rcpp`, `RcppEigen`, roxygen2,
+   testthat, rcmdcheck, remotes, devtools, pkgdown, knitr, and rmarkdown.
+4. Install the CRAN package `randnet` only in the local development environment
+   so the ECV provenance and wrapper behavior can be compared against upstream.
+   `randnet` must not become a netOP package dependency or be listed in
+   `Depends`, `Imports`, `Suggests`, or `Enhances`.
+5. After the source/dependency audit, install only dependencies that remain in
+   the final `Imports`, `Suggests`, or `LinkingTo` fields. Do not install the
+   current broad `DESCRIPTION` list blindly because several entries may be
+   obsolete.
+6. Prefer a project-local reproducibility record such as a version inventory or
+   lockfile only after the final dependency set is known. Do not commit a large
+   package cache or platform-specific binaries.
+7. Run a minimal Rcpp compilation smoke test before restructuring all three C++
+   sources, and record any compiler warnings separately from algorithm issues.
 
 ## Phase 1: Build a complete API and dependency inventory
 
@@ -419,14 +447,26 @@ The help pages for `ecv_stability_blockmodel()` and
 `ecv_stability_rdpg()` must state clearly, without implying authorship of the
 underlying ECV method or code:
 
-> netOP provides wrappers around the ECV implementation in the `randnet`
-> package. The ECV-specific implementation helpers are internal and are not
+> netOP provides self-contained wrappers around an ECV implementation derived
+> from the CRAN package `randnet`. Installing or using netOP does not require
+> `randnet`. The ECV-specific implementation helpers are internal and are not
 > part of the netOP public API.
 
-Verify during dependency audit whether both wrappers actually call or adapt
-`randnet` code. If the source is copied/adapted rather than invoked as an
-installed dependency, verify license and attribution requirements before
-release and describe the implementation relationship precisely.
+The package owner has confirmed that the ECV code was taken from the CRAN
+package `randnet`. CRAN `randnet` version 1.0 is licensed GPL (>= 2). During the
+licensing audit, identify the exact upstream source files/functions
+corresponding to the included implementation and record whether each portion
+was copied or adapted. `randnet` is a development-only reference and must not
+be a netOP dependency.
+
+**Public-release blocker:** copied or adapted GPL code must not be distributed
+as MIT-only code. Before making netOP public, obtain a defensible licensing
+resolution. The expected choices are either (a) license netOP compatibly with
+the upstream GPL terms and preserve required notices and attribution, or (b)
+replace the copied/adapted ECV code with an independently written
+implementation based on the published paper, with provenance documented. Do
+not relabel copied GPL code as an independent implementation, and do not make
+the repository public until this issue is resolved.
 
 NCV documentation must cite:
 
@@ -461,8 +501,8 @@ Add test groups for:
 - S3 method registration and dispatch;
 - argument-order and named-argument behavior;
 - ECV rename and absence of the old public name;
-- ECV wrapper behavior with `randnet` available and an informative condition
-  when it is unavailable, according to the chosen dependency classification;
+- ECV wrapper behavior without `randnet` installed, plus development-only
+  equivalence comparisons against CRAN `randnet` when it is locally available;
 - NCV ordinary cases and stability/failsafe cases;
 - dense and sparse parity where supported;
 - pure-R/compiled parity, including boundaries, invalid inputs, and ties;
@@ -506,6 +546,8 @@ Inspect at least:
 - dependency provenance and unnecessary high-risk dependencies;
 - copied or adapted ECV/randnet code for license compatibility, attribution,
   and compliance with the upstream license;
+- absence of `randnet` from all netOP dependency fields and clean-session
+  operation of both ECV wrappers without `randnet` installed;
 - benchmark code for machine-specific paths, personal data, or credentials;
 - generated package artifacts for accidental disclosure of `.Rhistory`, IDE
   state, caches, archives, or local paths.
@@ -596,8 +638,10 @@ The package owner has approved the recommendations in sections 4.1 through
   `https://github.com/sayan-ch/netOP/issues` for `BugReports`;
 - use `License: MIT + file LICENSE`;
 - list Sayan Chakrabarty as the sole package author and creator, retain the
-  current email, and add ORCID `0000-0003-2372-2076` in the standard
-  `Authors@R` comment field;
+  public maintainer email `sayanc@umich.edu`, and add ORCID
+  `0000-0003-2372-2076` in the standard `Authors@R` comment field;
+- the package owner has explicitly approved publishing `sayanc@umich.edu` in
+  package metadata;
 - do not list NETCROP or SONNET paper coauthors as package contributors unless
   their role in the package changes later;
 - use copyright year `2026`, as approved by the package owner;

@@ -161,6 +161,16 @@ unscoped upgrade of every R package or system package on the machine.
 7. Run a minimal Rcpp compilation smoke test before restructuring all three C++
    sources, and record any compiler warnings separately from algorithm issues.
 
+Create a licensing/provenance inventory alongside the dependency inventory.
+For every copied, adapted, vendored, or generated code component and bundled
+non-code asset, record its origin, upstream version or commit when known,
+copyright holder(s), license, required notices, modifications, and the netOP
+files that contain or use it. Confirm that all relevant licenses are compatible
+with netOP's `GPL (>= 2)` distribution and include every required license text,
+notice, and attribution. Ordinary runtime dependencies should be recorded with
+their licenses for compatibility review but their license texts should not be
+copied into netOP unless their terms require it.
+
 ## Phase 1: Build a complete API and dependency inventory
 
 ### 1.1 Function inventory
@@ -321,7 +331,7 @@ Use standard R package metadata:
   estimation, embedding, SONNET, NETCROP, ECV, and NCV;
 - `Version: 0.0.0.9000` until the owner chooses a first release;
 - `Authors@R` with the confirmed creator and contributor roles;
-- `License: MIT + file LICENSE`;
+- `License: GPL (>= 2)`;
 - `URL: https://github.com/sayan-ch/netOP`;
 - `BugReports: https://github.com/sayan-ch/netOP/issues`;
 - `Encoding: UTF-8`;
@@ -330,12 +340,14 @@ Use standard R package metadata:
 - accurate `Imports`, `Suggests`, and `LinkingTo` fields;
 - `Config/testthat/edition: 3` if testthat is adopted.
 
-The usual practice is to use the repository URL and issue tracker above, keep
-the package in a development version until the first release, and express MIT
-as `MIT + file LICENSE`. Use Sayan Chakrabarty as the sole package author and
-creator. The coauthors of the NETCROP and SONNET papers must be credited in the
-relevant scholarly citations, but must not be listed as package contributors
-because all package contributions are Sayan Chakrabarty's.
+The usual practice is to use the repository URL and issue tracker above and
+keep the package in a development version until the first release. Use
+`License: GPL (>= 2)` because the package owner has chosen to preserve the exact
+ECV code taken from the GPL-licensed CRAN package `randnet`. Use Sayan
+Chakrabarty as the sole package author and creator. The coauthors of the
+NETCROP and SONNET papers must be credited in the relevant scholarly citations,
+but must not be listed as package contributors because all package
+contributions are Sayan Chakrabarty's.
 
 Use copyright year `2026`, as selected by the package owner.
 
@@ -459,14 +471,16 @@ corresponding to the included implementation and record whether each portion
 was copied or adapted. `randnet` is a development-only reference and must not
 be a netOP dependency.
 
-**Public-release blocker:** copied or adapted GPL code must not be distributed
-as MIT-only code. Before making netOP public, obtain a defensible licensing
-resolution. The expected choices are either (a) license netOP compatibly with
-the upstream GPL terms and preserve required notices and attribution, or (b)
-replace the copied/adapted ECV code with an independently written
-implementation based on the published paper, with provenance documented. Do
-not relabel copied GPL code as an independent implementation, and do not make
-the repository public until this issue is resolved.
+**Resolved licensing decision:** preserve the exact ECV implementation taken
+from `randnet` rather than replacing it with a new implementation, and license
+netOP as `GPL (>= 2)`. During package conversion, replace the current MIT
+metadata and license file with the standard GPL-compatible package metadata
+recommended by *Writing R Extensions*. Add a `LICENSE.note`, source comments,
+or other appropriate notices that identify CRAN `randnet`, its relevant
+version and authors/copyright holders, its GPL (>= 2) license, and the exact
+files/functions incorporated into netOP. Do not alter the ECV algorithm while
+adapting it to package namespace and naming requirements. Verify exact-code
+equivalence against the CRAN source before public release.
 
 NCV documentation must cite:
 
@@ -546,6 +560,8 @@ Inspect at least:
 - dependency provenance and unnecessary high-risk dependencies;
 - copied or adapted ECV/randnet code for license compatibility, attribution,
   and compliance with the upstream license;
+- licenses and required notices for every other copied, adapted, vendored, or
+  generated component and bundled asset, with file-level provenance;
 - absence of `randnet` from all netOP dependency fields and clean-session
   operation of both ECV wrappers without `randnet` installed;
 - benchmark code for machine-specific paths, personal data, or credentials;
@@ -596,6 +612,8 @@ The final handoff must include:
 - R CMD check status on each tested platform;
 - unresolved warnings/notes;
 - security, robustness, and licensing findings;
+- the final licensing/provenance inventory and locations of all retained
+  upstream notices;
 - deliberate algorithmic changes, ideally none;
 - links to the README, vignette, tests, and principal documentation files.
 
@@ -636,7 +654,9 @@ The package owner has approved the recommendations in sections 4.1 through
 - use `https://github.com/sayan-ch/netOP` for `URL` and
   `https://sayan-ch.github.io` as the author website in `URL`, and use
   `https://github.com/sayan-ch/netOP/issues` for `BugReports`;
-- use `License: MIT + file LICENSE`;
+- use `License: GPL (>= 2)` and replace the current MIT license during package
+  conversion; preserve the exact `randnet`-derived ECV code and add all
+  required upstream attribution and notices;
 - list Sayan Chakrabarty as the sole package author and creator, retain the
   public maintainer email `sayanc@umich.edu`, and add ORCID
   `0000-0003-2372-2076` in the standard `Authors@R` comment field;

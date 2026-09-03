@@ -46,6 +46,11 @@ exhaustive API and security audit and accepts the additional latency. Reserve
   where it can be done systematically and safely; do not perform isolated
   reorderings that leave related functions inconsistent.
 - The remote repository is `https://github.com/sayan-ch/netOP.git`.
+- Continue implementation directly on `main`; use small, coherent commits and
+  push each validated checkpoint to `origin/main`. Never force-push.
+- The initial distribution target is GitHub. Prepare for, but do not submit to,
+  CRAN until the GitHub version is stable and the owner separately authorizes
+  a CRAN submission.
 
 ## Non-negotiable safety rules
 
@@ -299,13 +304,12 @@ Use standard R package metadata:
 
 The usual practice is to use the repository URL and issue tracker above, keep
 the package in a development version until the first release, and express MIT
-as `MIT + file LICENSE`. The current `Authors@R` entry for Sayan Chakrabarty and
-email may be retained unless the owner supplies coauthors, ORCID identifiers,
-or different roles. Do not invent contributor roles or ORCIDs.
+as `MIT + file LICENSE`. Use Sayan Chakrabarty as the sole package author and
+creator. The coauthors of the NETCROP and SONNET papers must be credited in the
+relevant scholarly citations, but must not be listed as package contributors
+because all package contributions are Sayan Chakrabarty's.
 
-For the year, preserve the existing copyright year unless the owner asks for a
-range such as `2025-2026`. A repository update alone does not require erasing
-the original copyright year.
+Use copyright year `2026`, as selected by the package owner.
 
 ### 4.2 Standard repository files
 
@@ -321,6 +325,10 @@ Add or update:
 - optional `cran-comments.md` only when preparing for CRAN submission.
 
 Do not add a CRAN badge or claim CRAN availability before a release exists.
+The initial README installation path must use GitHub, for example through
+`remotes::install_github("sayan-ch/netOP")`. Prepare CRAN-compatible metadata
+and checks during development, but treat actual CRAN submission as a later,
+separately authorized release phase.
 
 ### 4.3 GitHub Actions
 
@@ -584,28 +592,35 @@ The package owner has approved the recommendations in sections 4.1 through
 - add the README, NEWS, contributing guidance, cross-platform GitHub Actions,
   and one lightweight getting-started vignette described above;
 - use `https://github.com/sayan-ch/netOP` for `URL` and
+  `https://sayan-ch.github.io` as the author website in `URL`, and use
   `https://github.com/sayan-ch/netOP/issues` for `BugReports`;
 - use `License: MIT + file LICENSE`;
-- retain the current `Authors@R` entry for Sayan Chakrabarty as author and
-  creator, with the current email, unless additional information is supplied;
+- list Sayan Chakrabarty as the sole package author and creator, retain the
+  current email, and add ORCID `0000-0003-2372-2076` in the standard
+  `Authors@R` comment field;
+- do not list NETCROP or SONNET paper coauthors as package contributors unless
+  their role in the package changes later;
 - use copyright year `2026`, as approved by the package owner;
-- infer the minimum supported R version from actual language/API requirements,
-  then document and test that choice rather than inventing an unnecessarily
-  recent minimum;
+- set `Depends: R (>= 4.1.0)` and do not support R 3.x. The current source audit
+  found no active syntax that would require R 4.6; base-pipe examples occur
+  only in comments. Confirm dependency compatibility and run checks under R
+  4.1.x or the closest available compatible environment before finalizing;
+- continue development directly on `main`, using reviewable commits and
+  pushing only coherent checkpoints that have received proportionate local
+  validation;
+- publish the development package through GitHub first. Prepare for CRAN, but
+  do not submit or claim CRAN availability without separate owner approval;
 - add pkgdown configuration only after clean local package checks, and obtain
   separate authorization before enabling deployment or publishing a site.
 
-## Optional owner information still welcome
+## Information still needed only at later release stages
 
-The following information is not required to start and must not block the
-baseline or package conversion. Incorporate it if the owner supplies it:
+No additional owner information is required to begin the package conversion.
+Before publishing pkgdown or submitting to CRAN, ask for:
 
-1. Whether contributors besides Sayan Chakrabarty should appear in
-   `Authors@R`, and their roles/ORCIDs.
-2. Sayan Chakrabarty's ORCID, if one should be included.
-3. Whether a particular older R release must be supported beyond the minimum
-   inferred from the source.
-4. Whether direct pushes to `main` are desired after the baseline, or whether
-   subsequent implementation should use a feature branch and pull request.
-5. Whether and where pkgdown should be published after it is configured and
-   package checks are clean.
+1. confirmation of the desired pkgdown URL and whether GitHub Pages should be
+   enabled for this repository;
+2. confirmation of the first public release version and release date;
+3. explicit authorization to submit to CRAN;
+4. any CRAN submission comments, downstream-use information, or additional
+   maintainer contact details needed at that time.

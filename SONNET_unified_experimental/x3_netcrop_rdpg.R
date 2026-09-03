@@ -688,6 +688,7 @@ netcrop_rdpg <- function(
     choose(num_subnetworks, 2) * piece_size^2 / choose(n, 2)
 
   out <- list(
+    algorithm = "NETCROP",
     cv_loss = cv_loss,
     cv_all_loss = cv_all_loss,
     best_dimension_cv = best_dimension_cv,
@@ -746,15 +747,43 @@ netcrop_rdpg <- function(
 
 # Print the selected RDPG dimension for every requested loss.
 print.netcrop_rdpg <- function(x, ...) {
-  cat("NETCROP results for symmetric RDPG\n")
-  cat("-----------------------------------\n")
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  cat(algorithm, "results for symmetric RDPG\n")
+  cat(strrep("-", nchar(algorithm) + 27L), "\n", sep = "")
   print(x$overall_best, row.names = FALSE)
   invisible(x)
 }
 
 # Summarize a symmetric-RDPG NETCROP fit.
 summary.netcrop_rdpg <- function(object, ...) {
+  algorithm <- if (is.null(object$algorithm)) {
+    "NETCROP"
+  } else {
+    toupper(object$algorithm)
+  }
+  if (algorithm == "ECV") {
+    result <- list(
+      algorithm = algorithm,
+      call = object$call,
+      d_candidates = object$d_candidates,
+      nrep = object$nrep,
+      completed_repetitions = object$completed_repetitions,
+      valid_repetitions = object$valid_repetitions,
+      cv = object$cv,
+      train_proportion = object$train_proportion,
+      holdout_proportion = object$holdout_proportion,
+      holdout_count = object$holdout_count,
+      best_dimension_cv = object$best_dimension_cv,
+      overall_best = object$overall_best,
+      failure_diagnostics = object$failure_diagnostics,
+      ncores = object$ncores,
+      timing = object$timing
+    )
+    class(result) <- "summary.netcrop_rdpg"
+    return(result)
+  }
   result <- list(
+    algorithm = algorithm,
     call = object$call,
     d_candidates = object$d_candidates,
     nrep = object$nrep,
@@ -778,6 +807,32 @@ summary.netcrop_rdpg <- function(object, ...) {
 
 # Print a symmetric-RDPG NETCROP summary.
 print.summary.netcrop_rdpg <- function(x, ...) {
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  if (algorithm == "ECV") {
+    cat("Summary of ECV symmetric-RDPG dimension selection\n")
+    cat("-------------------------------------------------\n")
+    cat("Candidate d:", paste(x$d_candidates, collapse = ", "), "\n")
+    cat(
+      "Completed repetitions:", x$completed_repetitions,
+      "of", x$nrep, "requested\n"
+    )
+    cat("CV folds per repetition:", x$cv, "\n")
+    cat(sprintf("Training proportion: %.2f%%\n", 100 * x$train_proportion))
+    cat(sprintf("Holdout proportion: %.2f%%\n", 100 * x$holdout_proportion))
+    cat("Held-out unordered pairs per fold:", x$holdout_count, "\n")
+    cat("Best dimensions per repetition:\n")
+    print(x$best_dimension_cv, row.names = FALSE)
+    cat("Overall best dimensions:\n")
+    print(x$overall_best, row.names = FALSE)
+    if (!is.null(x$failure_diagnostics) &&
+        nrow(x$failure_diagnostics) > 0L) {
+      cat("Failed repetitions:\n")
+      print(x$failure_diagnostics, row.names = FALSE)
+    }
+    cat("Timing (seconds):\n")
+    print(x$timing)
+    return(invisible(x))
+  }
   cat("Summary of NETCROP symmetric-RDPG dimension selection\n")
   cat("----------------------------------------------------\n")
   cat("Candidate d:", paste(x$d_candidates, collapse = ", "), "\n")
@@ -816,12 +871,42 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
   }
+  dots <- list(...)
+  dot_is_result <- vapply(dots, inherits, logical(1), what = "netcrop_rdpg")
+  if (inherits(aggregate, "netcrop_rdpg") || any(dot_is_result)) {
+    if (!exists("plot_rdpg_comparison", mode = "function", inherits = TRUE)) {
+      stop(
+        "Source x6_other_algos.R before comparing RDPG results.",
+        call. = FALSE
+      )
+    }
+    comparison_results <- c(
+      list(x),
+      if (inherits(aggregate, "netcrop_rdpg")) list(aggregate) else NULL,
+      dots[dot_is_result]
+    )
+    comparison_options <- dots[!dot_is_result]
+    loss_scale <- if ("loss_scale" %in% names(comparison_options)) {
+      comparison_options$loss_scale
+    } else {
+      "relative"
+    }
+    return(do.call(
+      plot_rdpg_comparison,
+      c(comparison_results, list(loss_scale = loss_scale))
+    ))
+  }
   if (length(aggregate) != 1L || !is.logical(aggregate) || is.na(aggregate)) {
     stop("aggregate must be TRUE or FALSE.", call. = FALSE)
   }
   d_breaks <- sort(unique(x$cv_loss$d))
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  valid_cv_loss <- x$cv_loss[is.finite(x$cv_loss$average_loss), , drop = FALSE]
+  if (nrow(valid_cv_loss) == 0L) {
+    stop("No finite CV losses are available for plotting.", call. = FALSE)
+  }
   if (!aggregate) {
-    plot_data <- x$cv_loss
+    plot_data <- valid_cv_loss
     plot_data$repetition <- factor(plot_data$repetition)
     return(
       ggplot2::ggplot(
@@ -838,7 +923,7 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
         ggplot2::scale_x_continuous(breaks = d_breaks) +
         ggplot2::facet_wrap(~loss, scales = "free_y") +
         ggplot2::labs(
-          title = "NETCROP CV loss by RDPG dimension",
+          title = paste(algorithm, "CV loss by RDPG dimension"),
           x = "Latent dimension (d)",
           y = "Average CV loss",
           color = "Repetition"
@@ -848,12 +933,12 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
     )
   }
   grouping <- interaction(
-    x$cv_loss$d,
-    x$cv_loss$loss,
+    valid_cv_loss$d,
+    valid_cv_loss$loss,
     drop = TRUE,
     lex.order = TRUE
   )
-  plot_data <- do.call(rbind, lapply(split(x$cv_loss, grouping), function(z) {
+  plot_data <- do.call(rbind, lapply(split(valid_cv_loss, grouping), function(z) {
     standard_deviation <- stats::sd(z$average_loss)
     if (is.na(standard_deviation)) {
       standard_deviation <- 0
@@ -883,7 +968,7 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
     ggplot2::scale_x_continuous(breaks = d_breaks) +
     ggplot2::facet_wrap(~loss, scales = "free_y") +
     ggplot2::labs(
-      title = "NETCROP CV loss by RDPG dimension",
+      title = paste(algorithm, "CV loss by RDPG dimension"),
       x = "Latent dimension (d)",
       y = "Mean CV loss (plus or minus one SD)"
     ) +

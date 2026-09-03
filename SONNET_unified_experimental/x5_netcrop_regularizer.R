@@ -945,6 +945,7 @@ netcrop_tune_regularizer <- function(
             " candidate/repetition/loss combination(s) were non-finite.")
   }
   out <- list(
+    algorithm = "NETCROP",
     loss = loss_table,
     selection = selection,
     cv_loss = cv_loss,
@@ -999,8 +1000,9 @@ netcrop_tune_regularizer <- function(
 
 # Print selected regularization parameters.
 print.netcrop_regularizer <- function(x, ...) {
-  cat("NETCROP spectral-regularizer selection\n")
-  cat("--------------------------------------\n")
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  cat(algorithm, "spectral-regularizer selection\n")
+  cat(strrep("-", nchar(algorithm) + 31L), "\n", sep = "")
   cat("Model:", x$model, "  K:", x$K, "\n")
   print(x$overall_best, row.names = FALSE)
   invisible(x)
@@ -1008,7 +1010,34 @@ print.netcrop_regularizer <- function(x, ...) {
 
 # Summarize a NETCROP regularizer fit.
 summary.netcrop_regularizer <- function(object, ...) {
+  algorithm <- if (is.null(object$algorithm)) {
+    "NETCROP"
+  } else {
+    toupper(object$algorithm)
+  }
+  if (algorithm == "DKEST") {
+    result <- list(
+      algorithm = algorithm,
+      call = object$call,
+      model = object$model,
+      K = object$K,
+      tau_candidates = object$tau_candidates,
+      use_laplacian = object$options$use_laplacian,
+      dcbm_est_method = object$options$dcbm_est_method,
+      tau_hat = object$tau_hat,
+      selected_dk_stat = object$selected_dk_stat,
+      overall_best = object$overall_best,
+      valid_candidates = sum(object$dk_statistic$valid),
+      invalid_candidates = sum(!object$dk_statistic$valid),
+      diagnostics = object$diagnostics,
+      ncores = object$ncores,
+      timing = object$timing
+    )
+    class(result) <- "summary.netcrop_regularizer"
+    return(result)
+  }
   result <- list(
+    algorithm = algorithm,
     call = object$call,
     model = object$model,
     K = object$K,
@@ -1033,6 +1062,28 @@ summary.netcrop_regularizer <- function(object, ...) {
 
 # Print a NETCROP regularizer summary.
 print.summary.netcrop_regularizer <- function(x, ...) {
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  if (algorithm == "DKEST") {
+    cat("Summary of DKEST spectral-regularizer selection\n")
+    cat("-----------------------------------------------\n")
+    cat("Model:", x$model, "  K:", x$K, "\n")
+    cat("Candidates:", paste(x$tau_candidates, collapse = ", "), "\n")
+    cat("Laplacian scaling:", x$use_laplacian, "\n")
+    if (x$model == "DCBM") {
+      cat("DCBM estimator:", x$dcbm_est_method, "\n")
+    }
+    cat("Valid candidates:", x$valid_candidates, "\n")
+    cat("Invalid candidates:", x$invalid_candidates, "\n")
+    cat("Overall selection:\n")
+    print(x$overall_best, row.names = FALSE)
+    if (!is.null(x$diagnostics) && nrow(x$diagnostics) > 0L) {
+      cat("Diagnostics:\n")
+      print(x$diagnostics, row.names = FALSE)
+    }
+    cat("Timing (seconds):\n")
+    print(x$timing)
+    return(invisible(x))
+  }
   cat("Summary of NETCROP spectral-regularizer selection\n")
   cat("-------------------------------------------------\n")
   cat("Model:", x$model, "  K:", x$K, "\n")
@@ -1054,13 +1105,26 @@ print.summary.netcrop_regularizer <- function(x, ...) {
 
 # Plot regularization-parameter CV loss curves.
 plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  if (algorithm == "DKEST") {
+    stop(
+      "DKEST directly estimates tau_hat and has no CV loss to plot.",
+      call. = FALSE
+    )
+  }
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
   }
   if (length(aggregate) != 1L || !is.logical(aggregate) || is.na(aggregate)) {
     stop("aggregate must be TRUE or FALSE.", call. = FALSE)
   }
-  plot_data <- x$cv_loss
+  plot_data <- x$cv_loss[
+    is.finite(x$cv_loss$average_loss), , drop = FALSE
+  ]
+  if (nrow(plot_data) == 0L) {
+    stop("No finite regularizer criteria are available for plotting.",
+         call. = FALSE)
+  }
   if (aggregate) {
     plot_data <- stats::aggregate(
       average_loss ~ tau + loss,
@@ -1082,7 +1146,7 @@ plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
     ggplot2::geom_point() +
     ggplot2::facet_wrap(~loss, scales = "free_y") +
     ggplot2::labs(
-      title = "NETCROP CV loss by spectral regularization",
+      title = paste(algorithm, "criterion by spectral regularization"),
       x = "Regularization parameter (tau)",
       y = "Average CV loss",
       color = "Repetition"
@@ -1094,33 +1158,105 @@ plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
 
 
 # Benchmark code (intentionally not run when this file is sourced).
-# library(Matrix)
-# system.time(
-#   net <- generate_dcbm(
-#     n = 10000,
-#     K = 5,
-#     P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
-#     psi = sample(rbeta(300, 1, 4), 10000, replace = TRUE),
-#     ncores = 8L
-#   )
-# )
-# mean(net)
-#
-# system.time(
-#   nc_out <- netcrop_tune_regularizer(
-#     A = net,
-#     K = 5,
-#     tau_candidates = seq(0, 2, by = 0.05),
-#     use_dcbm = TRUE,
-#     nrep = 1L,
-#     use_laplacian = FALSE,
-#     losses = "sse",
-#     # label_reference = "leave_pair_out",
-#     ncores = 8L,
-#     force_windows = FALSE
-#   )
-# )
-#
+library(Matrix)
+system.time(
+  net1 <- generate_dcbm(
+    n = 1000,
+    K = 5,
+    P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
+    psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
+    ncores = 8L
+  )
+)
+system.time(
+  net2 <- generate_dcbm(
+    n = 1000,
+    K = 5,
+    P_block = 0.3 * diag(2 / 3, 5, 5) + 0.3 * matrix(1 / 3, 5, 5),
+    psi = sample(rbeta(300, 1, 4), 1000, replace = TRUE),
+    ncores = 8L
+  )
+)
+
+
+system.time(
+  nc_out1 <- netcrop_tune_regularizer(
+    A = net1,
+    K = 5,
+    tau_candidates = seq(0, 2, by = 0.05),
+    use_dcbm = TRUE,
+    nrep = 5L,
+    use_laplacian = TRUE,
+    losses = "sse",
+    # label_reference = "leave_pair_out",
+    ncores = 8L,
+    force_windows = FALSE
+  )
+)
+
+system.time(
+  nc_out2 <- netcrop_tune_regularizer(
+    A = net2,
+    K = 5,
+    tau_candidates = seq(0, 2, by = 0.05),
+    use_dcbm = TRUE,
+    nrep = 5L,
+    use_laplacian = TRUE,
+    losses = "sse",
+    # label_reference = "leave_pair_out",
+    ncores = 8L,
+    force_windows = FALSE
+  )
+)
+
 # nc_out
 # summary(nc_out)
 # plot(nc_out)
+
+
+system.time(
+  dk.out1 <- dkest_tune_regularizer(
+    A = net1,
+    K = 5,
+    tau_candidates = seq(0, 2, by = 0.05),
+    use_laplacian = TRUE,
+    use_dcbm = TRUE,
+    ncores = 8L
+  )
+)
+
+system.time(
+  dk.out2 <- dkest_tune_regularizer(
+    A = net2,
+    K = 5,
+    tau_candidates = seq(0, 2, by = 0.05),
+    use_laplacian = TRUE,
+    use_dcbm = TRUE,
+    ncores = 8L
+  )
+)
+
+# dk.out
+# summary(dk.out)
+# plot(dk.out)
+
+system.time(
+  or.out <- oracle_plotter(
+    A = list(net1, net2),
+    g_true = list(attributes(net1)$generator_parameters$g_true,
+                  attributes(net2)$generator_parameters$g_true),
+    tau_candidates = seq(0, 2, by = 0.05),
+    netcrop_outcomes = list(nc_out1, nc_out2),
+    dkest_outcomes = list(dk.out1, dk.out2),
+    include_netcrop_mean = TRUE,
+    include_netcrop_mode = TRUE,
+    losses = NULL,
+    engines = c("sonnet", "spectral_cluster"),
+    matching_method = "greedy",
+    ncores = 8L,
+    force_windows = FALSE
+  )
+)
+
+or.out
+attributes(or.out)

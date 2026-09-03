@@ -1412,6 +1412,7 @@ netcrop_blockmodel <- function(
     choose(num_subnetworks, 2) * piece_size^2 / choose(n, 2)
 
   out <- list(
+    algorithm = "NETCROP",
     cv_loss = cv_loss,
     cv_all_loss = cv_all_loss,
     best_model_cv = best_model_cv,
@@ -1473,14 +1474,64 @@ netcrop_blockmodel <- function(
 
 # Print the selected block model for every requested loss.
 print.netcrop_blockmodel <- function(x, ...) {
-  cat("NETCROP results for block models\n")
-  cat("--------------------------------\n")
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  cat(algorithm, "results for block models\n")
+  cat(strrep("-", nchar(algorithm) + 25L), "\n", sep = "")
   print(x$overall_best, row.names = FALSE)
   invisible(x)
 }
 
 # Summarize a NETCROP block-model fit.
 summary.netcrop_blockmodel <- function(object, ...) {
+  algorithm <- if (is.null(object$algorithm)) {
+    "NETCROP"
+  } else {
+    toupper(object$algorithm)
+  }
+  if (algorithm == "ECV") {
+    result <- list(
+      algorithm = algorithm,
+      call = object$call,
+      candidate_models = object$candidate_models,
+      nrep = object$nrep,
+      completed_repetitions = object$completed_repetitions,
+      valid_repetitions = object$valid_repetitions,
+      cv = object$cv,
+      train_proportion = object$train_proportion,
+      holdout_proportion = object$holdout_proportion,
+      holdout_count = object$holdout_count,
+      best_model_cv = object$best_model_cv,
+      overall_best = object$overall_best,
+      selection_diagnostics = object$selection_diagnostics,
+      failure_diagnostics = object$failure_diagnostics,
+      ncores = object$ncores,
+      timing = object$timing
+    )
+    class(result) <- "summary.netcrop_blockmodel"
+    return(result)
+  }
+  if (algorithm == "NCV") {
+    result <- list(
+      algorithm = algorithm,
+      call = object$call,
+      candidate_models = object$candidate_models,
+      nrep = object$nrep,
+      completed_repetitions = object$completed_repetitions,
+      valid_repetitions = object$valid_repetitions,
+      cv = object$cv,
+      fold_sizes = object$fold_sizes,
+      dc_est = object$dc_est,
+      tau = object$tau,
+      use_laplacian = object$use_laplacian,
+      best_model_cv = object$best_model_cv,
+      overall_best = object$overall_best,
+      failure_diagnostics = object$failure_diagnostics,
+      ncores = object$ncores,
+      timing = object$timing
+    )
+    class(result) <- "summary.netcrop_blockmodel"
+    return(result)
+  }
   matching_summary <- object$matching_summary
   if (is.null(matching_summary) && !is.null(object$matching_diagnostics)) {
     matching_summary <- list(
@@ -1491,6 +1542,7 @@ summary.netcrop_blockmodel <- function(object, ...) {
     )
   }
   result <- list(
+    algorithm = algorithm,
     call = object$call,
     candidate_models = object$candidate_models,
     nrep = object$nrep,
@@ -1513,6 +1565,63 @@ summary.netcrop_blockmodel <- function(object, ...) {
 
 # Print a NETCROP block-model summary.
 print.summary.netcrop_blockmodel <- function(x, ...) {
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  if (algorithm == "ECV") {
+    cat("Summary of ECV block-model selection\n")
+    cat("------------------------------------\n")
+    cat("Candidate models:", paste(unique(x$candidate_models$model),
+                                    collapse = ", "), "\n")
+    cat("Candidate K:", paste(unique(x$candidate_models$K),
+                               collapse = ", "), "\n")
+    cat(
+      "Completed repetitions:", x$completed_repetitions,
+      "of", x$nrep, "requested\n"
+    )
+    cat("CV folds per repetition:", x$cv, "\n")
+    cat(sprintf("Training proportion: %.2f%%\n", 100 * x$train_proportion))
+    cat(sprintf("Holdout proportion: %.2f%%\n", 100 * x$holdout_proportion))
+    cat("Held-out unordered pairs per fold:", x$holdout_count, "\n")
+    cat("Best models per repetition:\n")
+    print(x$best_model_cv, row.names = FALSE)
+    cat("Overall best models:\n")
+    print(x$overall_best, row.names = FALSE)
+    if (!is.null(x$failure_diagnostics) &&
+        nrow(x$failure_diagnostics) > 0L) {
+      cat("Failed repetitions:\n")
+      print(x$failure_diagnostics, row.names = FALSE)
+    }
+    cat("Timing (seconds):\n")
+    print(x$timing)
+    return(invisible(x))
+  }
+  if (algorithm == "NCV") {
+    cat("Summary of NCV block-model selection\n")
+    cat("------------------------------------\n")
+    cat("Candidate models:", paste(unique(x$candidate_models$model),
+                                    collapse = ", "), "\n")
+    cat("Candidate K:", paste(unique(x$candidate_models$K),
+                               collapse = ", "), "\n")
+    cat(
+      "Completed repetitions:", x$completed_repetitions,
+      "of", x$nrep, "requested\n"
+    )
+    cat("CV folds per repetition:", x$cv, "\n")
+    cat("Fold sizes:", paste(x$fold_sizes, collapse = ", "), "\n")
+    cat("DCBM estimator:", x$dc_est, "\n")
+    cat("Laplacian scaling:", x$use_laplacian, "\n")
+    cat("Best models per repetition:\n")
+    print(x$best_model_cv, row.names = FALSE)
+    cat("Overall best models:\n")
+    print(x$overall_best, row.names = FALSE)
+    if (!is.null(x$failure_diagnostics) &&
+        nrow(x$failure_diagnostics) > 0L) {
+      cat("Failed repetitions:\n")
+      print(x$failure_diagnostics, row.names = FALSE)
+    }
+    cat("Timing (seconds):\n")
+    print(x$timing)
+    return(invisible(x))
+  }
   cat("Summary of NETCROP block-model selection\n")
   cat("------------------------------------------\n")
   cat("Candidate models:", paste(unique(x$candidate_models$model),
@@ -1553,12 +1662,46 @@ plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
   }
+  dots <- list(...)
+  dot_is_result <- vapply(
+    dots, inherits, logical(1), what = "netcrop_blockmodel"
+  )
+  if (inherits(aggregate, "netcrop_blockmodel") || any(dot_is_result)) {
+    if (!exists(
+      "plot_blockmodel_comparison", mode = "function", inherits = TRUE
+    )) {
+      stop(
+        "Source x6_other_algos.R before comparing block-model results.",
+        call. = FALSE
+      )
+    }
+    comparison_results <- c(
+      list(x),
+      if (inherits(aggregate, "netcrop_blockmodel")) list(aggregate) else NULL,
+      dots[dot_is_result]
+    )
+    comparison_options <- dots[!dot_is_result]
+    loss_scale <- if ("loss_scale" %in% names(comparison_options)) {
+      comparison_options$loss_scale
+    } else {
+      "relative"
+    }
+    return(do.call(
+      plot_blockmodel_comparison,
+      c(comparison_results, list(loss_scale = loss_scale))
+    ))
+  }
   if (length(aggregate) != 1L || !is.logical(aggregate) || is.na(aggregate)) {
     stop("aggregate must be TRUE or FALSE.", call. = FALSE)
   }
   K_breaks <- sort(unique(x$cv_loss$K))
+  algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
+  valid_cv_loss <- x$cv_loss[is.finite(x$cv_loss$average_loss), , drop = FALSE]
+  if (nrow(valid_cv_loss) == 0L) {
+    stop("No finite CV losses are available for plotting.", call. = FALSE)
+  }
   if (!aggregate) {
-    plot_data <- x$cv_loss
+    plot_data <- valid_cv_loss
     plot_data$repetition <- factor(plot_data$repetition)
     return(
       ggplot2::ggplot(
@@ -1576,7 +1719,7 @@ plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
         ggplot2::scale_x_continuous(breaks = K_breaks) +
         ggplot2::facet_wrap(~loss, scales = "free_y") +
         ggplot2::labs(
-          title = "NETCROP CV loss by number of communities",
+          title = paste(algorithm, "CV loss by number of communities"),
           x = "Number of communities (K)",
           y = "Average CV loss",
           color = "Model",
@@ -1587,13 +1730,13 @@ plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
     )
   }
   grouping <- interaction(
-    x$cv_loss$K,
-    x$cv_loss$model,
-    x$cv_loss$loss,
+    valid_cv_loss$K,
+    valid_cv_loss$model,
+    valid_cv_loss$loss,
     drop = TRUE,
     lex.order = TRUE
   )
-  plot_data <- do.call(rbind, lapply(split(x$cv_loss, grouping), function(z) {
+  plot_data <- do.call(rbind, lapply(split(valid_cv_loss, grouping), function(z) {
     standard_deviation <- stats::sd(z$average_loss)
     if (is.na(standard_deviation)) {
       standard_deviation <- 0
@@ -1627,7 +1770,7 @@ plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
     ggplot2::scale_x_continuous(breaks = K_breaks) +
     ggplot2::facet_wrap(~loss, scales = "free_y") +
     ggplot2::labs(
-      title = "NETCROP CV loss by number of communities",
+      title = paste(algorithm, "CV loss by number of communities"),
       x = "Number of communities (K)",
       y = "Mean CV loss (plus or minus one SD)",
       color = "Model",

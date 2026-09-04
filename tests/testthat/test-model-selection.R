@@ -53,17 +53,21 @@ test_that("ECV and NCV wrappers use new names and require no randnet calls", {
   rdpg_text <- paste(deparse(body(ecv_stability_rdpg)), collapse = " ")
   expect_false(grepl("randnet", paste(ecv_text, rdpg_text), fixed = TRUE))
 
-  A <- small_block_network(24)
-  ecv <- ecv_stability_blockmodel(
-    A, 2, cv = 2, nrep = 1, ncores = 1, seed = 25,
-    losses = "sse", verbose = FALSE
-  )
-  ncv <- ncv_stability_blockmodel(
-    A, 2, cv = 2, nrep = 1, ncores = 1, seed = 26,
-    losses = "sse", verbose = FALSE
-  )
-  expect_s3_class(ecv, "netcrop_blockmodel")
-  expect_s3_class(ncv, "netcrop_blockmodel")
-  expect_identical(ecv$algorithm, "ECV")
-  expect_identical(ncv$algorithm, "NCV")
+  A_dense <- small_block_network(24)
+  A_sparse <- Matrix::Matrix(A_dense, sparse = TRUE)
+
+  for (A in list(A_dense, A_sparse)) {
+    ecv <- ecv_stability_blockmodel(
+      A, 2, cv = 2, nrep = 1, ncores = 1, seed = 25,
+      losses = "sse", verbose = FALSE
+    )
+    ncv <- ncv_stability_blockmodel(
+      A, 2, cv = 2, nrep = 1, ncores = 1, seed = 26,
+      losses = "sse", verbose = FALSE
+    )
+    expect_s3_class(ecv, "netcrop_blockmodel")
+    expect_s3_class(ncv, "netcrop_blockmodel")
+    expect_identical(ecv$algorithm, "ECV")
+    expect_identical(ncv$algorithm, "NCV")
+  }
 })

@@ -402,7 +402,12 @@ ecv_stability_blockmodel <- function(
   if (any(!stored_values %in% c(0, 1))) {
     stop("A must be binary.", call. = FALSE)
   }
-  if (any(diag(A) != 0)) {
+  A_diagonal <- if (inherits(A, "Matrix")) {
+    Matrix::diag(A)
+  } else {
+    base::diag(A)
+  }
+  if (any(A_diagonal != 0)) {
     stop("A must have a zero diagonal.", call. = FALSE)
   }
   
@@ -1294,7 +1299,12 @@ ncv_stability_blockmodel <- function(
     stop("A must be symmetric for NCV block-model selection.",
          call. = FALSE)
   }
-  if (any(diag(A) != 0)) {
+  A_diagonal <- if (inherits(A, "Matrix")) {
+    Matrix::diag(A)
+  } else {
+    base::diag(A)
+  }
+  if (any(A_diagonal != 0)) {
     stop("A must have a zero diagonal.", call. = FALSE)
   }
   max_K <- validate_count(max_K, "max_K", 2L)

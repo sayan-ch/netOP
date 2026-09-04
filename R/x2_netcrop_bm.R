@@ -5,7 +5,7 @@
 # non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an SBM or DCBM and number of communities by overlapping-subnetwork CV.
-#' @rdname model_selection
+#' @rdname netcrop_blockmodel
 #' @export
 netcrop_blockmodel <- function(
     A,
@@ -1473,7 +1473,7 @@ netcrop_blockmodel <- function(
 }
 
 # Print the selected block model for every requested loss.
-#' @rdname model_selection
+#' @rdname netcrop_blockmodel
 #' @export
 print.netcrop_blockmodel <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -1484,7 +1484,7 @@ print.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Summarize a NETCROP block-model fit.
-#' @rdname model_selection
+#' @rdname netcrop_blockmodel
 #' @export
 summary.netcrop_blockmodel <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
@@ -1568,7 +1568,7 @@ summary.netcrop_blockmodel <- function(object, ...) {
 }
 
 # Print a NETCROP block-model summary.
-#' @rdname model_selection
+#' @rdname netcrop_blockmodel
 #' @export
 print.summary.netcrop_blockmodel <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -1664,7 +1664,7 @@ print.summary.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Plot CV loss curves, optionally aggregating across repetitions.
-#' @rdname model_selection
+#' @rdname netcrop_blockmodel
 #' @export
 plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

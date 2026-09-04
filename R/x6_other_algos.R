@@ -320,7 +320,7 @@ ECV.BM <- function (A, max.K, cv = 3, holdout.p = 0.1, tau = 0, dc.est = 2,
 }
 
 # Run repeated ECV block-model selection with validated inputs and stable output.
-#' @rdname ecv_stability
+#' @rdname ecv_stability_blockmodel
 #' @export
 ecv_stability_blockmodel <- function(
     A,
@@ -1215,7 +1215,7 @@ ncv_bm <- function(
 }
 
 # Stabilize NCV block-model selection across repeated node partitions.
-#' @rdname ncv_stability
+#' @rdname ncv_stability_blockmodel
 #' @export
 ncv_stability_blockmodel <- function(
     A,
@@ -1671,7 +1671,7 @@ ecv_rdpg_legacy_environment <- local({
 })
 
 # Stabilize ECV dimension selection for a symmetric RDPG.
-#' @rdname ecv_stability
+#' @rdname ecv_stability_rdpg
 #' @export
 ecv_stability_rdpg <- function(
     A,
@@ -2223,7 +2223,7 @@ plot_rdpg_comparison <- function(..., loss_scale = c("relative", "raw")) {
 }
 
 # Select a spectral regularization parameter using the DK statistic.
-#' @rdname model_selection
+#' @rdname dkest_tune_regularizer
 #' @export
 dkest_tune_regularizer <- function(
     A,
@@ -2685,7 +2685,7 @@ dkest_tune_regularizer <- function(
 }
 
 # Fit spectral clustering over multiple regularization values and networks.
-#' @rdname model_selection
+#' @rdname mult_reg_spectral_cluster
 #' @export
 mult_reg_spectral_cluster <- function(
     A,
@@ -3016,7 +3016,7 @@ mult_reg_spectral_cluster <- function(
 }
 
 # Fit SONNET over multiple regularization values and networks.
-#' @rdname model_selection
+#' @rdname mult_reg_sonnet
 #' @export
 mult_reg_sonnet <- function(
     A,
@@ -3297,7 +3297,7 @@ mult_reg_sonnet <- function(
 }
 
 # Plot oracle clustering accuracy and optional regularizer selections.
-#' @rdname model_selection
+#' @rdname oracle_plotter
 #' @export
 oracle_plotter <- function(
     A,

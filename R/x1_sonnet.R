@@ -961,7 +961,7 @@
 }
 
 # Fit SONNET with one overlap shared by all repetitions.
-#' @rdname model_selection
+#' @rdname sonnet_overlap_variants
 #' @export
 sonnet_shared_overlap <- function(...) {
   result <- .sonnet_fit(..., share_overlap = TRUE)
@@ -970,7 +970,7 @@ sonnet_shared_overlap <- function(...) {
 }
 
 # Fit SONNET with an independently sampled overlap in every repetition.
-#' @rdname model_selection
+#' @rdname sonnet_overlap_variants
 #' @export
 sonnet_independent_overlap <- function(...) {
   result <- .sonnet_fit(..., share_overlap = FALSE)
@@ -979,7 +979,7 @@ sonnet_independent_overlap <- function(...) {
 }
 
 # Fit either SONNET overlap variant.
-#' @rdname model_selection
+#' @rdname sonnet
 #' @export
 sonnet <- function(
     A,
@@ -1023,7 +1023,7 @@ sonnet <- function(
 }
 
 # Print a compact SONNET fit overview.
-#' @rdname model_selection
+#' @rdname sonnet
 #' @export
 print.sonnet <- function(x, ...) {
   cat("SONNET fit\n")
@@ -1064,7 +1064,7 @@ print.sonnet <- function(x, ...) {
 }
 
 # Summarize a SONNET fit.
-#' @rdname model_selection
+#' @rdname sonnet
 #' @export
 summary.sonnet <- function(object, ...) {
   maximum_membership <- vapply(
@@ -1099,7 +1099,7 @@ summary.sonnet <- function(object, ...) {
 }
 
 # Print a SONNET summary.
-#' @rdname model_selection
+#' @rdname sonnet
 #' @export
 print.summary.sonnet <- function(x, ...) {
   cat("Summary of SONNET fit\n")

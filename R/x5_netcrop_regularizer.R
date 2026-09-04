@@ -4,7 +4,7 @@
 # This implementation uses observed-network cross-validation only.
 
 # Compare two pairs of community-label vectors using negative NMI.
-#' @rdname model_selection
+#' @rdname pairwise_clustering_losses
 #' @export
 pair_nmi_loss <- function(g_1, g_2, g_3, g_4) {
   vectors <- list(g_1 = g_1, g_2 = g_2, g_3 = g_3, g_4 = g_4)
@@ -29,7 +29,7 @@ pair_nmi_loss <- function(g_1, g_2, g_3, g_4) {
 }
 
 # Compare two pairs of community-label vectors using matched Hamming loss.
-#' @rdname model_selection
+#' @rdname pairwise_clustering_losses
 #' @export
 pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
   vectors <- list(g_1 = g_1, g_2 = g_2, g_3 = g_3, g_4 = g_4)
@@ -55,7 +55,7 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 }
 
 # Select a spectral regularization parameter by overlapping-subnetwork CV.
-#' @rdname model_selection
+#' @rdname netcrop_tune_regularizer
 #' @export
 netcrop_tune_regularizer <- function(
     A,
@@ -1005,7 +1005,7 @@ netcrop_tune_regularizer <- function(
 }
 
 # Print selected regularization parameters.
-#' @rdname model_selection
+#' @rdname netcrop_tune_regularizer
 #' @export
 print.netcrop_regularizer <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -1017,7 +1017,7 @@ print.netcrop_regularizer <- function(x, ...) {
 }
 
 # Summarize a NETCROP regularizer fit.
-#' @rdname model_selection
+#' @rdname netcrop_tune_regularizer
 #' @export
 summary.netcrop_regularizer <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
@@ -1071,7 +1071,7 @@ summary.netcrop_regularizer <- function(object, ...) {
 }
 
 # Print a NETCROP regularizer summary.
-#' @rdname model_selection
+#' @rdname netcrop_tune_regularizer
 #' @export
 print.summary.netcrop_regularizer <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -1116,7 +1116,7 @@ print.summary.netcrop_regularizer <- function(x, ...) {
 }
 
 # Plot regularization-parameter CV loss curves.
-#' @rdname model_selection
+#' @rdname netcrop_tune_regularizer
 #' @export
 plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)

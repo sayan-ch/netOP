@@ -13,7 +13,7 @@
 # U D^(1/2) and V D^(1/2). If align_with is supplied, the left embedding is
 # aligned to it and the same orthogonal rotation is applied to the right
 # embedding, preserving their reconstructed matrix.
-#' @rdname embedding_estimating
+#' @rdname ase
 #' @export
 ase <- function(
     A,
@@ -297,7 +297,7 @@ ase <- function(
 # A + t(A), following the package convention for undirected networks.
 # regularize_tau uses A_tau = A + tau * mean(deg) / n before either direct
 # decomposition or Laplacian construction.
-#' @rdname embedding_estimating
+#' @rdname spectral_cluster
 #' @export
 spectral_cluster <- function(
     A = NULL,
@@ -815,7 +815,7 @@ spectral_cluster <- function(
 # (n I + 1 1^T) alpha = rowSums(theta), and double-centering without forming an
 # n-by-n centering matrix. The diagonal is excluded from objective and gradient.
 # Optional direct initial values may replace either spectral initializer.
-#' @rdname embedding_estimating
+#' @rdname lsm_pgd
 #' @export
 lsm_pgd <- function(
     A,

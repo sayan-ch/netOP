@@ -5,21 +5,94 @@ reference:
 - title: Generate and read networks
   contents:
   - network_generators
+  - generate_adjacency
+  - generate_er
+  - generate_dcbm
+  - generate_community_labels
+  - generate_degree_parameters
+  - generate_inverse_beta_degree_parameters
+  - generate_latent_positions
+  - generate_rdpg
+  - generate_lsm
+  - generate_lsm_positions
+  - generate_lsm_alpha
+  - generate_truncated_normal
+  - normalize_lsm_positions
+  - scale_lsm_to_average_degree
+  - scale_to_average_degree
+  - apply_average_degree_scaling
+  - get_generator_parameters
+  - write_network
 - title: Mathematical and graph utilities
   contents:
   - math_utilities
+  - sse
+  - sae
+  - bin_dev
+  - auc
+  - softmax
+  - clip_values
+  - clip_probabilities
+  - sigmoid
+  - softplus
+  - modal
+  - nmi
+  - matrix_density
+  - is_symmetric_matrix
+  - graph_laplacian
+  - outer_add
+  - procrustes
+  - eig_decomp
+  - singular_decomp
+  - truncated_svd_reconstruct
+  - usvt
+  - matrix-generics
   - network_utilities
-  - resource_utilities
+  - adjacency_neighbors
+  - connected_components
+  - shortest_path_distances
+  - is_symmetric_network_matrix
 - title: Embedding and estimation
   contents:
   - embedding_estimating
+  - ase
+  - spectral_cluster
+  - lsm_pgd
+  - estimate_sbm
+  - estimate_sbm_P_hat
+  - label_match_greedy
 - title: Model selection
   contents:
   - model_selection
+  - sonnet
+  - sonnet_overlap_variants
+  - sonnet_param_select
+  - mult_reg_sonnet
+  - mult_reg_spectral_cluster
+  - netcrop_blockmodel
+  - netcrop_rdpg
+  - netcrop_lsm
+  - netcrop_tune_regularizer
+  - netcrop_param_select
   - ecv_stability
+  - ecv_stability_blockmodel
+  - ecv_stability_rdpg
   - ncv_stability
+  - ncv_stability_blockmodel
+  - dkest_tune_regularizer
+  - pairwise_clustering_losses
+  - oracle_plotter
+- title: Simulation and resource planning
+  contents:
+  - resource_utilities
+  - run_simulations
+  - uni_mclapply
+  - measure_peak_ram
+  - estimate_rspectra_ram
+  - available_ram
 articles:
 - title: Workflows
   navbar: ~
   contents:
   - getting-started
+  - choosing-a-method

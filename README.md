@@ -22,8 +22,8 @@ remotes::install_github("sayan-ch/netOP")
 library(netOP)
 
 A <- generate_sbm(
-  n = 60,
-  K = 2,
+  n = 200,
+  K = 3,
   alpha = 0.45,
   beta = 0.08,
   representation = "dense",
@@ -31,19 +31,22 @@ A <- generate_sbm(
   ncores = 1
 )
 
-embedding <- ase(A, d = 2)
+parameters <- get_generator_parameters(A)
+table(parameters$g_true)
+
+embedding <- ase(A, d = 3)
 fit <- spectral_cluster(
   A,
-  K = 2,
+  K = 3,
   spectral_engine = "base",
   cluster_engine = "kmeans"
 )
 
 selection <- netcrop_blockmodel(
   A,
-  K_candidates = 1:3,
+  K_candidates = 1:5,
   num_subnetworks = 2,
-  overlap_size = 20,
+  overlap_size = 50,
   nrep = 1,
   losses = "sse",
   ncores = 1,
@@ -54,6 +57,18 @@ selection <- netcrop_blockmodel(
 )
 summary(selection)
 ```
+
+Generators use sparse output by default where supported. `netOP` re-exports
+`mean()`, `sum()`, `diag()`, `rowMeans()`, `rowSums()`, `colMeans()`, and
+`colSums()` from Matrix, so these familiar operations dispatch correctly for
+sparse networks after `library(netOP)`. Use `representation = "dense"` only
+when a dense matrix is required by a downstream workflow. Generator truth and
+settings can be recovered with `get_generator_parameters()` as shown above.
+
+For reproducible computations, supply `seed` explicitly. Documentation
+examples use `ncores = 1` for portability and repeatability; supported routines
+may use more workers in production while retaining their documented seeding
+behavior.
 
 Public model-selection entry points consistently begin with the primary
 network and model-size candidate set:
@@ -78,6 +93,22 @@ the maximum because that is part of the incorporated algorithm.
 - Scalable fitting: SONNET overlapping-subnetwork clustering.
 - Model selection: NETCROP for block models, RDPGs, latent-space models, and
   spectral regularization; ECV and NCV stability wrappers; DKEST.
+
+See the package articles for a [method-selection
+guide](vignettes/choosing-a-method.Rmd)
+and a [getting-started
+workflow](https://github.com/sayan-ch/netOP/blob/main/vignettes/getting-started.Rmd).
+
+## Glossary
+
+- **SBM**: stochastic block model.
+- **DCBM**: degree-corrected stochastic block model.
+- **RDPG**: random dot product graph.
+- **LSM**: latent-space model.
+- **ASE**: adjacency spectral embedding.
+- **ECV**: edge cross-validation.
+- **NCV**: node cross-validation.
+- **NETCROP**: NETwork CRoss-Validation using Overlapping Partitions.
 
 ## Citations and implementation disclosures
 

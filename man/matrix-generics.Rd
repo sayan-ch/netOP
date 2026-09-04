@@ -13,6 +13,11 @@
 \usage{
 sum(..., na.rm = FALSE)
 }
+\arguments{
+\item{...}{Objects passed to the selected Matrix-aware generic.}
+
+\item{na.rm}{Whether missing values should be removed by \code{\link[=sum]{sum()}}.}
+}
 \description{
 These generics are re-exported from Matrix so that common summary
 operations dispatch correctly for sparse network matrices after loading

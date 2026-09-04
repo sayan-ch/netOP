@@ -5,7 +5,7 @@
 # non-reference embedding through the overlap, and evaluate every unordered
 # pair of non-overlap pieces. Package loading resolves all internal helpers.
 
-#' @rdname model_selection
+#' @rdname netcrop_rdpg
 #' @export
 netcrop_rdpg <- function(
     A,
@@ -746,7 +746,7 @@ netcrop_rdpg <- function(
 }
 
 # Print the selected RDPG dimension for every requested loss.
-#' @rdname model_selection
+#' @rdname netcrop_rdpg
 #' @export
 print.netcrop_rdpg <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -757,7 +757,7 @@ print.netcrop_rdpg <- function(x, ...) {
 }
 
 # Summarize a symmetric-RDPG NETCROP fit.
-#' @rdname model_selection
+#' @rdname netcrop_rdpg
 #' @export
 summary.netcrop_rdpg <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
@@ -810,7 +810,7 @@ summary.netcrop_rdpg <- function(object, ...) {
 }
 
 # Print a symmetric-RDPG NETCROP summary.
-#' @rdname model_selection
+#' @rdname netcrop_rdpg
 #' @export
 print.summary.netcrop_rdpg <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
@@ -873,7 +873,7 @@ print.summary.netcrop_rdpg <- function(x, ...) {
 }
 
 # Plot RDPG CV loss curves, optionally aggregating across repetitions.
-#' @rdname model_selection
+#' @rdname netcrop_rdpg
 #' @export
 plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

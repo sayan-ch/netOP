@@ -23,6 +23,8 @@
 #' operations dispatch correctly for sparse network matrices after loading
 #' netOP.
 #'
+#' @param ... Objects passed to the selected Matrix-aware generic.
+#' @param na.rm Whether missing values should be removed by [sum()].
 #' @name matrix-generics
 #' @aliases mean diag rowMeans rowSums colMeans colSums sum
 #' @importFrom Matrix mean diag rowMeans rowSums colMeans colSums

@@ -20,8 +20,8 @@ matrix.
 
 ```{r generate}
 A <- generate_sbm(
-  n = 30,
-  K = 2,
+  n = 200,
+  K = 3,
   alpha = 0.5,
   beta = 0.08,
   representation = "dense",
@@ -32,15 +32,22 @@ parameters <- get_generator_parameters(A)
 table(parameters$g_true)
 ```
 
+Sparse output is the default where a generator supports it. `netOP` re-exports
+the Matrix-aware `mean()`, `sum()`, `diag()`, `rowMeans()`, `rowSums()`,
+`colMeans()`, and `colSums()` generics, so common summaries work after loading
+`netOP` without separately attaching Matrix. Choose
+`representation = "dense"` only when downstream software requires an ordinary
+dense matrix.
+
 ## Embed and cluster
 
 ```{r fit}
-embedding <- ase(A, d = 2)
+embedding <- ase(A, d = 3)
 dim(embedding$Z_hat)
 
 clustering <- spectral_cluster(
   A,
-  K = 2,
+  K = 3,
   spectral_engine = "base",
   cluster_engine = "kmeans"
 )
@@ -53,12 +60,12 @@ The public model-selection APIs begin with the network and candidate set.
 Examples use one worker and small deterministic inputs; production analyses can
 increase repetition counts and choose partial eigensolvers.
 
-```{r select}
+```{r select, eval=FALSE}
 selection <- netcrop_blockmodel(
   A,
-  K_candidates = 1:2,
+  K_candidates = 1:5,
   num_subnetworks = 2,
-  overlap_size = 10,
+  overlap_size = 50,
   nrep = 1,
   losses = "sse",
   ncores = 1,
@@ -70,18 +77,27 @@ selection <- netcrop_blockmodel(
 selection$best_model_overall
 ```
 
+Setting `seed` makes randomized stages reproducible. The examples use
+`ncores = 1` because that is portable across operating systems and keeps the
+vignette deterministic. For larger analyses, supported routines can use more
+workers; consult each function's `seed` documentation for its parallel
+reproducibility contract.
+
 NETCROP is also available for RDPG and latent-space dimensions and spectral
 regularization. The self-contained ECV and NCV wrappers provide alternative
 block-model stability selectors; see `?ecv_stability_blockmodel` and
 `?ncv_stability_blockmodel` for disclosures, algorithm restrictions, and
 citations.
 
+See the `choosing-a-method` article for a side-by-side guide to NETCROP, ECV,
+NCV, DKEST, and SONNET.
+
 ## Results and plotting
 
 All high-level model-selection results provide `print()` and `summary()`
 methods. Plotting is available when `ggplot2` is installed.
 
-```{r inspect}
+```{r inspect, eval=FALSE}
 summary(selection)
 if (requireNamespace("ggplot2", quietly = TRUE)) {
   plot(selection)

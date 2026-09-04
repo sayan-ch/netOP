@@ -7,7 +7,7 @@
 # non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an LSM latent dimension by overlapping-subnetwork cross-validation.
-#' @rdname model_selection
+#' @rdname netcrop_lsm
 #' @export
 netcrop_lsm <- function(
     A,
@@ -750,7 +750,7 @@ netcrop_lsm <- function(
 }
 
 # Print the selected LSM dimension for every requested loss.
-#' @rdname model_selection
+#' @rdname netcrop_lsm
 #' @export
 print.netcrop_lsm <- function(x, ...) {
   cat("NETCROP results for latent-space models\n")
@@ -760,7 +760,7 @@ print.netcrop_lsm <- function(x, ...) {
 }
 
 # Summarize an LSM NETCROP fit.
-#' @rdname model_selection
+#' @rdname netcrop_lsm
 #' @export
 summary.netcrop_lsm <- function(object, ...) {
   result <- list(
@@ -783,7 +783,7 @@ summary.netcrop_lsm <- function(object, ...) {
 }
 
 # Print an LSM NETCROP summary.
-#' @rdname model_selection
+#' @rdname netcrop_lsm
 #' @export
 print.summary.netcrop_lsm <- function(x, ...) {
   cat("Summary of NETCROP latent-space-model dimension selection\n")
@@ -815,7 +815,7 @@ print.summary.netcrop_lsm <- function(x, ...) {
 }
 
 # Plot LSM CV loss curves, optionally aggregating across repetitions.
-#' @rdname model_selection
+#' @rdname netcrop_lsm
 #' @export
 plot.netcrop_lsm <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

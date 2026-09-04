@@ -27,7 +27,7 @@ validate_adjacency <- function(A) {
 }
 
 # Build adjacency-list neighbors for the pure-R graph algorithms.
-#' @rdname network_utilities
+#' @rdname adjacency_neighbors
 #' @export
 adjacency_neighbors <- function(
     A,
@@ -88,7 +88,7 @@ adjacency_neighbors <- function(
 # Components are undirected/weak: an edge in either direction connects nodes.
 # Edge weights do not affect membership. Components are returned in discovery
 # order, and nodes within each component follow breadth-first search order.
-#' @rdname network_utilities
+#' @rdname connected_components
 #' @export
 connected_components <- function(
     A,
@@ -192,7 +192,7 @@ connected_components <- function(
 #
 # When components tie in size, discovery order determines the winner, matching
 # which.max behavior from the pasted implementation.
-#' @rdname network_utilities
+#' @rdname connected_components
 #' @export
 largest_connected_component <- function(
     A,
@@ -237,7 +237,7 @@ largest_connected_component <- function(
 }
 
 # Build weighted adjacency lists without densifying sparse matrices.
-#' @rdname network_utilities
+#' @rdname adjacency_neighbors
 #' @export
 adjacency_weighted_neighbors <- function(
     A,
@@ -318,7 +318,7 @@ adjacency_weighted_neighbors <- function(
 # direction is traversable in both directions. If reciprocal edge weights
 # differ, the smaller nonzero weight is used. Weighted paths require
 # nonnegative weights; zero denotes absence of an edge.
-#' @rdname network_utilities
+#' @rdname shortest_path_distances
 #' @export
 shortest_path_distances <- function(
     A,

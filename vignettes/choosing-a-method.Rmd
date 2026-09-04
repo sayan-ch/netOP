@@ -1,0 +1,136 @@
+---
+title: "Choosing a Method"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing a Method}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup}
+library(netOP)
+```
+
+## At a glance
+
+The methods address related but distinct tasks. Start from the scientific
+question and the assumed network model rather than treating their scores as
+interchangeable.
+
+| Method | Primary role | Natural use |
+|---|---|---|
+| NETCROP | Model selection by overlapping-network subsampling | Select block-model community count, RDPG or LSM dimension, or a spectral regularizer |
+| ECV | Model selection by holding out edges | Select block-model community count or RDPG dimension |
+| NCV | Community-count selection by holding out nodes | Select an SBM or DCBM community count |
+| DKEST | Spectral-regularizer selection | Tune regularization for spectral clustering |
+| SONNET | Scalable clustering by combining overlapping subnetworks | Fit a large network when a full-network clustering fit is inconvenient |
+
+NETCROP, ECV, and NCV are alternative validation strategies. Their loss values
+come from different holdout constructions and should not be compared as though
+they were measurements on a common scale. DKEST has the narrower purpose of
+regularizer tuning. SONNET is principally an estimator, not a substitute for a
+model-selection criterion; pair it with a justified community count or a
+selection workflow when that count is unknown.
+
+## A common block-model setup
+
+Use the same deterministic network when comparing workflows conceptually.
+Generator metadata remains available without storing a dense probability
+matrix.
+
+```{r network}
+A <- generate_sbm(
+  n = 200,
+  K = 3,
+  alpha = 0.5,
+  beta = 0.08,
+  seed = 2026,
+  ncores = 1
+)
+truth <- get_generator_parameters(A)
+table(truth$g_true)
+```
+
+The generator returns sparse output by default where supported. `netOP`
+re-exports Matrix-aware `mean()`, `sum()`, `diag()`, `rowMeans()`, `rowSums()`,
+`colMeans()`, and `colSums()`, so ordinary summaries dispatch correctly after
+`library(netOP)`. Request dense output explicitly only when another tool needs
+it.
+
+## Candidate sets and entry points
+
+For a block model with an unknown community count, a natural introductory
+candidate set is `1:5`:
+
+```{r block-selection, eval=FALSE}
+netcrop_fit <- netcrop_blockmodel(
+  A, K_candidates = 1:5,
+  nrep = 1, ncores = 1, seed = 1, verbose = FALSE
+)
+
+ecv_fit <- ecv_stability_blockmodel(
+  A, max_K = 5,
+  nrep = 1, ncores = 1, seed = 1, verbose = FALSE
+)
+
+ncv_fit <- ncv_stability_blockmodel(
+  A, max_K = 5,
+  nrep = 1L, ncores = 1, seed = 1, verbose = FALSE
+)
+```
+
+ECV and NCV use maximum-size interfaces and evaluate the sequence through that
+maximum. NETCROP accepts an explicit candidate vector.
+
+For an RDPG or LSM example with true dimension `d = 3`, use candidate
+dimensions `1:5`:
+
+```{r dimension-selection, eval=FALSE}
+rdpg_fit <- netcrop_rdpg(
+  A, d_candidates = 1:5,
+  nrep = 1, ncores = 1, seed = 2, verbose = FALSE
+)
+
+ecv_rdpg_fit <- ecv_stability_rdpg(
+  A, max_d = 5,
+  nrep = 1, ncores = 1, seed = 2, verbose = FALSE
+)
+
+lsm_fit <- netcrop_lsm(
+  A, d_candidates = 1:5,
+  nrep = 1, ncores = 1, seed = 2, verbose = FALSE
+)
+```
+
+For regularized spectral clustering, compare NETCROP's regularizer selector
+with DKEST, using the same scientifically appropriate candidate grid. For a
+known `K = 3`, SONNET provides scalable fitting through `sonnet()`; its shared-
+and independent-overlap variants are described on the SONNET help pages.
+
+## Reproducibility
+
+Pass `seed` to randomized generators and fitting or selection routines. Examples
+use `ncores = 1` to behave consistently across operating systems and to keep
+article builds lightweight. Production runs may use more workers where the
+function supports them; the individual help page documents how its seed is
+applied to parallel tasks. Record the package version, candidate set, loss,
+repetition count, seed, and worker count with reported results.
+
+## Glossary
+
+- **SBM** — stochastic block model.
+- **DCBM** — degree-corrected stochastic block model.
+- **RDPG** — random dot product graph.
+- **LSM** — latent-space model.
+- **ASE** — adjacency spectral embedding.
+- **ECV** — edge cross-validation.
+- **NCV** — node cross-validation.
+- **NETCROP** — NETwork CRoss-Validation using Overlapping Partitions.
+
+## References and disclosures
+
+Use `citation("netOP")` for machine-readable citations. The method help pages
+provide method-specific references and implementation disclosures. In
+particular, netOP's self-contained ECV implementation is derived from CRAN
+`randnet` 1.0, but `randnet` is not a netOP dependency. File-level licensing
+and provenance are recorded in `inst/COPYRIGHTS`.

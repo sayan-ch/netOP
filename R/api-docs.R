@@ -141,9 +141,9 @@ NULL
 #' @return A generated adjacency matrix, edge-list path, parsed network,
 #'   calibrated probabilities, latent values, or generator metadata.
 #' @examples
-#' A <- generate_er(n = 12, p = 0.2, seed = 1, ncores = 1)
+#' A <- generate_er(n = 200, average_degree = 5, seed = 1, ncores = 1)
 #' get_generator_parameters(A)
-#' generate_sbm(n = 12, K = 2, alpha = 0.4, beta = 0.1,
+#' generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
 #'              seed = 2, ncores = 1)
 #' @name network_generators
 NULL
@@ -182,9 +182,9 @@ NULL
 #' @return An embedding, fitted clustering/model, reconstructed probability
 #'   matrix, or label-matching result.
 #' @examples
-#' A <- generate_sbm(n = 20, K = 2, alpha = 0.5, beta = 0.1,
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
 #'                   representation = "dense", seed = 3, ncores = 1)
-#' spectral_cluster(A, K = 2, spectral_engine = "base",
+#' spectral_cluster(A, K = 3, spectral_engine = "base",
 #'                  cluster_engine = "kmeans")
 #' label_match_greedy(c(2, 2, 1, 1), c(1, 1, 2, 2), K = 2)
 #' @name embedding_estimating
@@ -240,10 +240,10 @@ NULL
 #' Cross-Validation and Model Selection via Subsampling. arXiv:2504.06903.
 #' \doi{10.48550/arXiv.2504.06903}
 #' @examples
-#' netcrop_param_select(test_prop = 0.05, n = 30, o_range = 0)
-#' A <- generate_sbm(n = 18, K = 2, alpha = 0.5, beta = 0.1,
-#'                   representation = "dense", seed = 4, ncores = 1)
-#' fit <- sonnet(A, K = 2, num_subnetworks = 2, overlap_size = 6,
+#' netcrop_param_select(test_prop = 0.05, n = 200, o_range = 0)
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 4, ncores = 1)
+#' fit <- sonnet(A, K = 3, num_subnetworks = 2, overlap_size = 20,
 #'               ncores = 1, seed = 5, spectral_engine = "base")
 #' fit
 #' @name model_selection
@@ -278,10 +278,12 @@ NULL
 #' Li, T., Levina, E., and Zhu, J. (2020). Network cross-validation by edge
 #' sampling. *Biometrika*, 107(2), 257-276. \doi{10.1093/biomet/asaa006}
 #' @examples
-#' A <- generate_sbm(n = 16, K = 2, alpha = 0.5, beta = 0.1,
-#'                   representation = "dense", seed = 6, ncores = 1)
-#' ecv_stability_blockmodel(A, max_K = 2, cv = 2, nrep = 1,
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 6, ncores = 1)
+#' ecv_stability_blockmodel(A, max_K = 5, cv = 2, nrep = 1,
 #'                          ncores = 1, seed = 7, verbose = FALSE)
+#' }
 #' @name ecv_stability
 NULL
 
@@ -313,10 +315,12 @@ NULL
 #' Number of Communities in Network Data. *Journal of the American Statistical
 #' Association*, 113(521), 241-251. \doi{10.1080/01621459.2016.1246365}
 #' @examples
-#' A <- generate_sbm(n = 24, K = 2, alpha = 0.55, beta = 0.08,
-#'                   representation = "dense", seed = 24, ncores = 1)
-#' ncv_stability_blockmodel(A, max_K = 2, cv = 2, nrep = 1,
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.55, beta = 0.08,
+#'                   seed = 24, ncores = 1)
+#' ncv_stability_blockmodel(A, max_K = 5, cv = 2, nrep = 1,
 #'                          ncores = 1, seed = 26, verbose = FALSE,
 #'                          losses = "sse")
+#' }
 #' @name ncv_stability
 NULL

@@ -84,8 +84,15 @@ set_generator_parameters <- function(A, parameters) {
   A
 }
 
-# Retrieve parameters attached by a generator in this file.
-#' @rdname network_generators
+#' Retrieve parameters attached by a network generator
+#'
+#' Returns the compact generating parameters stored on a network produced by a
+#' netOP generator. Both dense and sparse generated matrices are supported.
+#'
+#' @inheritParams network_generators
+#' @return A named list of generating parameters, or `NULL` when none is attached.
+#' @seealso [generate_er()], [generate_sbm()], [generate_rdpg()], [generate_lsm()]
+#' @rdname get_generator_parameters
 #' @export
 get_generator_parameters <- function(A) {
   attr(A, "generator_parameters", exact = TRUE)
@@ -105,8 +112,15 @@ validate_network_for_io <- function(A) {
   invisible(TRUE)
 }
 
-# Check symmetry without requiring the Matrix package to be attached.
-#' @rdname network_generators
+#' Check whether a network matrix is symmetric
+#'
+#' Tests symmetry for either a base matrix or a sparse `Matrix` object without
+#' requiring users to attach Matrix.
+#'
+#' @inheritParams network_generators
+#' @return A single logical value.
+#' @seealso [is_symmetric_matrix()]
+#' @rdname is_symmetric_network_matrix
 #' @export
 is_symmetric_network_matrix <- function(A, tolerance = 1e-10) {
   if (inherits(A, "Matrix")) {
@@ -125,12 +139,18 @@ resolve_network_format <- function(file, format) {
   if (extension == "csv") "csv" else "tsv"
 }
 
-# Write A as an edge list with two node columns and an optional weight column.
-#
-# Metadata comment lines preserve n, direction, and weighting, including when
-# isolated nodes do not occur in the edge list. Undirected matrices store only
-# one requested triangle, including nonzero diagonal entries for self-loops.
-#' @rdname network_generators
+#' Read and write network edge lists
+#'
+#' `write_network()` writes a dense or sparse network as an edge list with two
+#' node columns and an optional weight column. Metadata preserves network size,
+#' direction, and weighting, including when isolated nodes are absent.
+#'
+#' @inheritParams network_generators
+#' @param n Optional network size, used when metadata cannot determine it.
+#' @return `write_network()` invisibly returns `file`; `read_network()` returns
+#'   a dense matrix or sparse `dgCMatrix`, according to `representation`.
+#' @seealso [generate_adjacency()]
+#' @rdname network_io
 #' @export
 write_network <- function(
     A,
@@ -230,14 +250,10 @@ write_network <- function(
   invisible(file)
 }
 
-# Read an edge list into a dense matrix or a general sparse dgCMatrix.
-#
-# For undirected input, each off-diagonal edge must occur only once. The matrix
-# is constructed from the stored triangle with A <- A + t(A); diagonal loop
-# weights are then added once so they are not doubled. Matrix::sparseMatrix's
-# symmetric option is intentionally not used because symmetric Matrix classes
-# can interact poorly with RSpectra.
-#' @rdname network_generators
+#' @description `read_network()` reconstructs an edge list as a dense matrix or
+#'   general sparse `dgCMatrix`. For undirected input, each off-diagonal edge
+#'   must occur only once.
+#' @rdname network_io
 #' @export
 read_network <- function(
     file,
@@ -460,9 +476,18 @@ clip_generator_probabilities <- function(P, lower_clip, upper_clip) {
   pmin(pmax(P, lower_clip), upper_clip)
 }
 
-# Calibrate a global probability multiplier to a requested expected row degree.
-# Bisection accounts for probability clipping, unlike a one-step ratio.
-#' @rdname network_generators
+#' Scale probabilities to a target average degree
+#'
+#' These twin functions apply calibrated bisection or the historical one-step
+#' scaling rule to a dense or sparse probability matrix.
+#'
+#' @inheritParams network_generators
+#' @param P Dense or sparse edge-probability matrix.
+#' @param average_degree Target expected average row degree.
+#' @param max_iterations Positive maximum number of bisection iterations.
+#' @return A list containing the scaled probability matrix `P` and `multiplier`.
+#' @seealso [apply_average_degree_scaling()], [scale_lsm_to_average_degree()]
+#' @rdname scale_to_average_degree
 #' @export
 scale_to_average_degree <- function(
     P,
@@ -549,10 +574,9 @@ scale_to_average_degree <- function(
   list(P = make_probability(multiplier), multiplier = multiplier)
 }
 
-# Apply the one-step average-degree scaling used by the original generators.
-# The multiplier is computed before clipping and before removing the diagonal.
-# Consequently, the final expected degree can differ from average_degree.
-#' @rdname network_generators
+#' @description `scale_to_average_degree_naive()` applies the historical
+#'   one-step ratio before clipping and loop removal.
+#' @rdname scale_to_average_degree
 #' @export
 scale_to_average_degree_naive <- function(
     P,
@@ -598,8 +622,15 @@ scale_to_average_degree_naive <- function(
   list(P = P, multiplier = multiplier)
 }
 
-# Select calibrated bisection or the original one-step degree scaling.
-#' @rdname network_generators
+#' Apply the selected average-degree scaling method
+#'
+#' Dispatches to the calibrated or historical probability-scaling rule.
+#'
+#' @inheritParams network_generators
+#' @param P Dense or sparse edge-probability matrix.
+#' @return A list containing the scaled probability matrix `P` and `multiplier`.
+#' @seealso [scale_to_average_degree()], [scale_lsm_to_average_degree()]
+#' @rdname apply_average_degree_scaling
 #' @export
 apply_average_degree_scaling <- function(
     P,
@@ -626,12 +657,18 @@ apply_average_degree_scaling <- function(
   )
 }
 
-# Sample an adjacency matrix from an edge-probability matrix.
-#
-# For undirected networks only the upper triangle is sampled and then mirrored,
-# so reciprocal edges are identical. Explicit row-specific seeds make results
-# independent of ncores and avoid duplicated RNG streams after process forks.
-#' @rdname network_generators
+#' Sample a network from edge probabilities
+#'
+#' Samples a dense or sparse adjacency matrix from `P`. Explicit row-specific
+#' seeds make results reproducible across worker counts.
+#'
+#' @inheritParams network_generators
+#' @param P Dense or sparse edge-probability matrix.
+#' @param n Optional network size inferred from `P` when omitted.
+#' @param directed Whether to sample directed edges independently.
+#' @return A base matrix or sparse `dgCMatrix`, according to `representation`.
+#' @seealso [generate_er()], [generate_rdpg()], [generate_sbm()]
+#' @rdname generate_adjacency
 #' @export
 generate_adjacency <- function(
     P,
@@ -791,8 +828,21 @@ generate_adjacency <- function(
   methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
 }
 
-# Generate an Erdos-Renyi adjacency matrix.
-#' @rdname network_generators
+#' Generate an Erdos-Renyi network
+#'
+#' Generates a dense or sparse Erdos-Renyi adjacency matrix and stores its
+#' generating parameters as lightweight metadata.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param average_degree Optional target expected average degree.
+#' @param directed Whether to generate a directed network.
+#' @return A generated adjacency matrix; see [get_generator_parameters()].
+#' @examples
+#' A <- generate_er(n = 200, average_degree = 5, seed = 1, ncores = 1)
+#' get_generator_parameters(A)
+#' @seealso [generate_sbm()], [generate_rdpg()]
+#' @rdname generate_er
 #' @export
 generate_er <- function(
     n,
@@ -850,8 +900,19 @@ generate_er <- function(
   )
 }
 
-# Generate or validate an n-by-d latent-position matrix.
-#' @rdname network_generators
+#' Generate or validate latent positions
+#'
+#' Returns a finite `n`-by-`d` latent-position matrix, either supplied by the
+#' caller or sampled from `latent_distribution`.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param d Positive latent dimension.
+#' @param Z Optional supplied latent-position matrix.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @return A numeric matrix with `n` rows and `d` columns.
+#' @seealso [generate_rdpg()], [generate_lsm_positions()]
+#' @rdname generate_latent_positions
 #' @export
 generate_latent_positions <- function(
     n = NULL,
@@ -911,12 +972,21 @@ generate_latent_positions <- function(
   matrix(values, nrow = n, ncol = d)
 }
 
-# Generate an RDPG or generalized/directed RDPG adjacency matrix.
-#
-# Undirected models use Z. Directed models use Z_left and Z_right. Any missing
-# latent matrix is generated; dimensions are inferred from supplied matrices
-# whenever possible.
-#' @rdname network_generators
+#' Generate a random dot product graph
+#'
+#' Generates a dense or sparse RDPG adjacency matrix. Undirected models use
+#' `Z`; directed models use `Z_left` and `Z_right`.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param d Positive latent dimension.
+#' @param directed Whether to generate a directed network.
+#' @return A generated adjacency matrix; see [get_generator_parameters()].
+#' @examples
+#' A <- generate_rdpg(n = 200, d = 3, seed = 2, ncores = 1)
+#' get_generator_parameters(A)
+#' @seealso [generate_latent_positions()], [ase()], [netcrop_rdpg()]
+#' @rdname generate_rdpg
 #' @export
 generate_rdpg <- function(
     n = NULL,
@@ -1065,8 +1135,17 @@ generate_rdpg <- function(
   set_generator_parameters(A, parameters)
 }
 
-# Generate community labels, or validate labels supplied by the caller.
-#' @rdname network_generators
+#' Generate or validate community labels
+#'
+#' Produces community memberships for an SBM, DCBM, or latent-space model.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param K Positive number of communities.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @return An integer vector of length `n` with values from `1` through `K`.
+#' @seealso [generate_sbm()], [generate_dcbm()], [generate_lsm_positions()]
+#' @rdname generate_community_labels
 #' @export
 generate_community_labels <- function(
     n = NULL,
@@ -1123,8 +1202,15 @@ generate_community_labels <- function(
              prob = community_probabilities)
 }
 
-# Generate the historical default DCBM degree parameters.
-#' @rdname network_generators
+#' Generate inverse-beta degree parameters
+#'
+#' Draws the historical default degree parameters used by the DCBM generator.
+#'
+#' @inheritParams network_generators
+#' @param n Nonnegative number of degree parameters.
+#' @return A nonnegative numeric vector of length `n`.
+#' @seealso [generate_degree_parameters()], [generate_dcbm()]
+#' @rdname generate_inverse_beta_degree_parameters
 #' @export
 generate_inverse_beta_degree_parameters <- function(
     n,
@@ -1141,8 +1227,18 @@ generate_inverse_beta_degree_parameters <- function(
   1 / stats::rbeta(n, shape1 = shape_1, shape2 = shape_2)
 }
 
-# Generate or validate nonnegative DCBM degree parameters.
-#' @rdname network_generators
+#' Generate or validate DCBM degree parameters
+#'
+#' Returns nonnegative node degree parameters, optionally normalized within
+#' communities.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param g_true Optional community-label vector.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @return A nonnegative numeric vector of length `n`.
+#' @seealso [generate_inverse_beta_degree_parameters()], [generate_dcbm()]
+#' @rdname generate_degree_parameters
 #' @export
 generate_degree_parameters <- function(
     n = NULL,
@@ -1218,12 +1314,25 @@ generate_degree_parameters <- function(
   unname(psi)
 }
 
-# Generate an SBM or degree-corrected SBM adjacency matrix.
-#
-# g_true and psi may be supplied directly. Missing values are generated.
-# P_block may be supplied directly; otherwise alpha is the within-community
-# probability and alpha * beta is the between-community probability.
-#' @rdname network_generators
+#' Generate block-model networks
+#'
+#' `generate_dcbm()` generates a degree-corrected stochastic block model;
+#' `generate_sbm()` is its ordinary-block-model twin with unit degree effects.
+#' Both return dense or sparse adjacency matrices.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param K Positive number of communities.
+#' @param P_block Optional `K`-by-`K` block-probability matrix.
+#' @param sparsity_multiplier Nonnegative multiplier applied to probabilities.
+#' @param directed Whether to generate a directed network.
+#' @return A generated adjacency matrix; see [get_generator_parameters()].
+#' @examples
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
+#'                   seed = 3, ncores = 1)
+#' get_generator_parameters(A)
+#' @seealso [generate_community_labels()], [estimate_sbm()], [estimate_dcbm()]
+#' @rdname generate_blockmodel
 #' @export
 generate_dcbm <- function(
     n = NULL,
@@ -1372,8 +1481,8 @@ generate_dcbm <- function(
   )
 }
 
-# Generate an ordinary SBM by fixing every degree parameter to one.
-#' @rdname network_generators
+#' @description `generate_sbm()` fixes every degree parameter to one.
+#' @rdname generate_blockmodel
 #' @export
 generate_sbm <- function(
     n = NULL,
@@ -1427,9 +1536,15 @@ generate_sbm <- function(
   set_generator_parameters(A, parameters)
 }
 
-# Draw standard-normal noise truncated to a finite interval using inverse-CDF
-# sampling. This avoids a dependency on truncnorm.
-#' @rdname network_generators
+#' Generate truncated standard-normal values
+#'
+#' Draws standard-normal noise on a finite interval by inverse-CDF sampling.
+#'
+#' @inheritParams network_generators
+#' @param n Positive number of values to generate.
+#' @return A numeric vector of length `n`.
+#' @seealso [generate_lsm_positions()]
+#' @rdname generate_truncated_normal
 #' @export
 generate_truncated_normal <- function(
     n,
@@ -1453,8 +1568,14 @@ generate_truncated_normal <- function(
   stats::qnorm(stats::runif(n, lower_probability, upper_probability))
 }
 
-# Center and normalize latent positions as in the pasted LSM generator.
-#' @rdname network_generators
+#' Normalize latent-space positions
+#'
+#' Centers and scales a latent-position matrix using the LSM convention.
+#'
+#' @param Z A finite numeric latent-position matrix.
+#' @return A centered and normalized matrix with the same dimensions as `Z`.
+#' @seealso [generate_lsm_positions()], [generate_lsm()]
+#' @rdname normalize_lsm_positions
 #' @export
 normalize_lsm_positions <- function(Z) {
   Z <- sweep(Z, 2L, colMeans(Z), FUN = "-")
@@ -1467,8 +1588,21 @@ normalize_lsm_positions <- function(Z) {
   Z / normalization
 }
 
-# Generate latent positions from a finite Gaussian mixture.
-#' @rdname network_generators
+#' Generate latent-space-model positions
+#'
+#' Generates an `n`-by-`d` latent-position matrix from a finite Gaussian
+#' mixture with `K` communities.
+#'
+#' @inheritParams network_generators
+#' @param g_true Community-label vector of length `n`.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @return A numeric matrix with `n` rows and `d` columns.
+#' @examples
+#' g <- generate_community_labels(n = 200, K = 3, seed = 4)
+#' Z <- generate_lsm_positions(n = 200, d = 3, K = 3, g_true = g, seed = 5)
+#' dim(Z)
+#' @seealso [generate_lsm()], [generate_lsm_alpha()], [normalize_lsm_positions()]
+#' @rdname generate_lsm_positions
 #' @export
 generate_lsm_positions <- function(
     n,
@@ -1512,8 +1646,19 @@ generate_lsm_positions <- function(
   community_means[g_true, , drop = FALSE] + noise
 }
 
-# Validate or generate the node intercept used by the latent-space model.
-#' @rdname network_generators
+#' Generate latent-space-model intercepts
+#'
+#' Validates or generates the node intercept used by the latent-space model.
+#'
+#' @param n Positive number of nodes.
+#' @param alpha Optional scalar or length-`n` intercept vector.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @return A finite numeric vector of length `n`.
+#' @examples
+#' alpha <- generate_lsm_alpha(n = 200, seed = 6)
+#' length(alpha)
+#' @seealso [generate_lsm()], [generate_lsm_positions()]
+#' @rdname generate_lsm_alpha
 #' @export
 generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
   n <- validate_generator_count(n, "n")
@@ -1533,13 +1678,15 @@ generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
   unname(alpha)
 }
 
-# Shift an LSM logit matrix to control expected average degree.
-#
-# The naive method reproduces the original ten-step update based on
-# -log(current_degree / target_degree), including diagonal probabilities during
-# its updates and removing them only at the end. The calibrated method uses
-# bisection against the final clipped probability matrix after loop handling.
-#' @rdname network_generators
+#' Scale latent-space logits to a target average degree
+#'
+#' Shifts an LSM logit matrix using the historical iterative method or calibrated
+#' bisection.
+#'
+#' @inheritParams network_generators
+#' @return A list containing the probability matrix `P` and `intercept_shift`.
+#' @seealso [generate_lsm()], [scale_to_average_degree()]
+#' @rdname scale_lsm_to_average_degree
 #' @export
 scale_lsm_to_average_degree <- function(
     theta,
@@ -1648,16 +1795,22 @@ scale_lsm_to_average_degree <- function(
   )
 }
 
-# Generate a Hoff/Ma-style latent-space-model adjacency matrix.
-#
-# Undirected models use Z. Directed models use Z_left and Z_right. Missing
-# latent positions, community labels, and alpha are generated. A supplied
-# scalar alpha is recycled to all nodes. With distance_adjustment = TRUE, each
-# half-intercept is reduced by the corresponding squared row norm and the
-# latent cross-product is doubled. In the undirected scalar-alpha case this is
-# exactly alpha - ||Z_i - Z_j||^2; vector alpha gives its node-intercept
-# generalization.
-#' @rdname network_generators
+#' Generate a latent-space-model network
+#'
+#' Generates a dense or sparse Hoff/Ma-style latent-space-model adjacency
+#' matrix from supplied or generated positions, memberships, and intercepts.
+#'
+#' @inheritParams network_generators
+#' @param alpha Optional scalar or node-specific intercepts.
+#' @param naive_iterations Positive iteration count for historical scaling.
+#' @param directed Whether to generate a directed network.
+#' @return A generated adjacency matrix; see [get_generator_parameters()].
+#' @examples
+#' A <- generate_lsm(n = 200, d = 3, K = 3, seed = 7, ncores = 1)
+#' get_generator_parameters(A)
+#' @seealso [generate_lsm_positions()], [generate_lsm_alpha()], [lsm_pgd()],
+#'   [netcrop_lsm()]
+#' @rdname generate_lsm
 #' @export
 generate_lsm <- function(
     n = NULL,

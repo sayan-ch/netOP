@@ -2,15 +2,14 @@
 #
 # This file follows NAMING_CONVENTION.md. Names from the pasted code have been
 # converted from period separators or unexplained capitalization to snake_case.
-# Compile the optional accelerated AUC implementation with:
-#
-Rcpp::sourceCpp("02_math_helpers.cpp", 
-                showOutput = FALSE, verbose = FALSE, echo = FALSE)
+# Compiled accelerators are registered when the package is installed.
 
 # Return the most frequent value in x, using the first value to break ties.
 #
 # If na_rm is FALSE, NA is treated as a possible modal value. If removal leaves
 # no observations, return a typed NA value.
+#' @rdname math_utilities
+#' @export
 modal <- function(x, na_rm = FALSE) {
   if (length(na_rm) != 1L || !is.logical(na_rm) || is.na(na_rm)) {
     stop("na_rm must be TRUE or FALSE.", call. = FALSE)
@@ -42,6 +41,8 @@ validate_error_inputs <- function(x, y, na_rm) {
 }
 
 # Compute the sum of squared errors between equal-length numeric vectors.
+#' @rdname math_utilities
+#' @export
 sse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
 
@@ -49,6 +50,8 @@ sse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 }
 
 # Compute the sum of absolute errors between equal-length numeric vectors.
+#' @rdname math_utilities
+#' @export
 sae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
 
@@ -56,6 +59,8 @@ sae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 }
 
 # Compute the mean squared error between equal-length numeric vectors.
+#' @rdname math_utilities
+#' @export
 mse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
 
@@ -63,6 +68,8 @@ mse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 }
 
 # Compute the mean absolute error between equal-length numeric vectors.
+#' @rdname math_utilities
+#' @export
 mae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
 
@@ -76,6 +83,8 @@ mae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 # entropy when it is installed; otherwise compute the same empirical plug-in
 # quantities directly. A constant joint labeling has zero entropy, making the
 # normalized value undefined, and returns NaN.
+#' @rdname math_utilities
+#' @export
 nmi <- function(g_1, g_2) {
   if (!is.atomic(g_1) || !is.null(dim(g_1)) ||
       !is.atomic(g_2) || !is.null(dim(g_2))) {
@@ -129,6 +138,8 @@ nmi <- function(g_1, g_2) {
 # Missing values remain missing. Infinite values are replaced when the
 # corresponding bound is finite. Names, dimensions, and dimension names are
 # preserved by the elementwise pmax/pmin operations.
+#' @rdname math_utilities
+#' @export
 clip_values <- function(x, lower_clip = -Inf, upper_clip = Inf) {
   if (!is.numeric(x)) {
     stop("x must be a numeric vector or matrix.", call. = FALSE)
@@ -155,6 +166,8 @@ clip_values <- function(x, lower_clip = -Inf, upper_clip = Inf) {
 }
 
 # Clip probabilities to [eps, 1 - eps] to protect logs and inverse links.
+#' @rdname math_utilities
+#' @export
 clip_probabilities <- function(P, eps = 1e-6) {
   if (length(eps) != 1L ||
       !is.numeric(eps) ||
@@ -174,6 +187,8 @@ clip_probabilities <- function(P, eps = 1e-6) {
 # Probabilities are clipped to [epsilon, 1 - epsilon] before taking logarithms.
 # Despite the historical name, this returns the summed negative log-likelihood,
 # without the factor of two sometimes included in definitions of deviance.
+#' @rdname math_utilities
+#' @export
 bin_dev <- function(
     x, y, epsilon = 1e-5, na_rm = TRUE, validate_inputs = TRUE) {
   if (validate_inputs && (!is.numeric(x) || !is.numeric(y))) {
@@ -212,6 +227,8 @@ bin_dev <- function(
 }
 
 # Compute mean binary cross-entropy over the observed response/probability pairs.
+#' @rdname math_utilities
+#' @export
 bin_dev_mean <- function(
     x, y, epsilon = 1e-5, na_rm = TRUE, validate_inputs = TRUE) {
   total_loss <- bin_dev(
@@ -232,6 +249,8 @@ bin_dev_mean <- function(
 # otherwise, use an equivalent base-R rank calculation. This makes the helper
 # usable when Rcpp, a compiler, the shared library, or the exported function is
 # unavailable. Ties receive their average rank in both implementations.
+#' @rdname math_utilities
+#' @export
 auc <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
   group <- as.numeric(A)
   predictions <- as.numeric(P)
@@ -252,8 +271,8 @@ auc <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
     stop("use_cpp must be TRUE or FALSE.", call. = FALSE)
   }
 
-  if (use_cpp && exists("auc_cpp", mode = "function", inherits = TRUE)) {
-    compiled_auc <- get("auc_cpp", mode = "function", inherits = TRUE)
+  if (use_cpp && exists("auc_cpp", mode = "function", inherits = TRUE, envir = environment())) {
+    compiled_auc <- get("auc_cpp", mode = "function", inherits = TRUE, envir = environment())
     compiled_result <- tryCatch(
       list(
         success = TRUE,
@@ -288,6 +307,8 @@ auc <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
 }
 
 # Convert ROC AUC, where larger is better, into a loss where smaller is better.
+#' @rdname math_utilities
+#' @export
 auc_as_loss <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
   1 - auc(
     A = A, P = P, use_cpp = use_cpp,
@@ -296,6 +317,8 @@ auc_as_loss <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
 }
 
 # Compute log(1 + exp(x)) without overflow or avoidable underflow.
+#' @rdname math_utilities
+#' @export
 softplus <- function(x) {
   if (!is.numeric(x)) {
     stop("x must be numeric.", call. = FALSE)
@@ -304,6 +327,8 @@ softplus <- function(x) {
 }
 
 # Compute the logistic sigmoid with a numerically stable base-R implementation.
+#' @rdname math_utilities
+#' @export
 sigmoid <- function(x) {
   if (!is.numeric(x)) {
     stop("x must be numeric.", call. = FALSE)
@@ -336,6 +361,8 @@ validate_extrema_inputs <- function(x, na_rm, temperature = NULL) {
 # Missing positions receive zero weight when na_rm is TRUE. If na_rm is FALSE,
 # any missing score produces an all-NA result. Positive infinities split all
 # mass equally; an all-negative-infinity vector is treated as a complete tie.
+#' @rdname math_utilities
+#' @export
 softmax <- function(x, temperature = 1, na_rm = FALSE) {
   validate_extrema_inputs(x, na_rm, temperature)
 
@@ -368,6 +395,8 @@ softmax <- function(x, temperature = 1, na_rm = FALSE) {
 }
 
 # Convert scores to normalized exponential weights favoring smaller values.
+#' @rdname math_utilities
+#' @export
 softmin <- function(x, temperature = 1, na_rm = FALSE) {
   validate_extrema_inputs(x, na_rm, temperature)
   softmax(-x, temperature = temperature, na_rm = na_rm)
@@ -376,6 +405,8 @@ softmin <- function(x, temperature = 1, na_rm = FALSE) {
 # Return a 0-1 selector marking every maximal value in x.
 #
 # Tied maxima all receive one. Missing-value behavior matches softmax.
+#' @rdname math_utilities
+#' @export
 hardmax <- function(x, na_rm = FALSE) {
   validate_extrema_inputs(x, na_rm)
 
@@ -397,12 +428,16 @@ hardmax <- function(x, na_rm = FALSE) {
 }
 
 # Return a 0-1 selector marking every minimal value in x.
+#' @rdname math_utilities
+#' @export
 hardmin <- function(x, na_rm = FALSE) {
   validate_extrema_inputs(x, na_rm)
   hardmax(-x, na_rm = na_rm)
 }
 
 # Sample one index according to the softmax weights.
+#' @rdname math_utilities
+#' @export
 which_softmax <- function(x, temperature = 1, na_rm = FALSE) {
   probabilities <- softmax(x, temperature = temperature, na_rm = na_rm)
   if (length(probabilities) == 0L || all(is.na(probabilities))) {
@@ -412,6 +447,8 @@ which_softmax <- function(x, temperature = 1, na_rm = FALSE) {
 }
 
 # Sample one index according to the softmin weights.
+#' @rdname math_utilities
+#' @export
 which_softmin <- function(x, temperature = 1, na_rm = FALSE) {
   probabilities <- softmin(x, temperature = temperature, na_rm = na_rm)
   if (length(probabilities) == 0L || all(is.na(probabilities))) {
@@ -421,6 +458,8 @@ which_softmin <- function(x, temperature = 1, na_rm = FALSE) {
 }
 
 # Return all indices tied for the maximum value.
+#' @rdname math_utilities
+#' @export
 which_hardmax <- function(x, na_rm = FALSE) {
   weights <- hardmax(x, na_rm = na_rm)
   if (length(weights) == 0L || all(is.na(weights))) {
@@ -430,6 +469,8 @@ which_hardmax <- function(x, na_rm = FALSE) {
 }
 
 # Return all indices tied for the minimum value.
+#' @rdname math_utilities
+#' @export
 which_hardmin <- function(x, na_rm = FALSE) {
   weights <- hardmin(x, na_rm = na_rm)
   if (length(weights) == 0L || all(is.na(weights))) {
@@ -442,6 +483,8 @@ which_hardmin <- function(x, na_rm = FALSE) {
 #
 # The compiled implementation is optional. If it is unavailable or fails, the
 # wrapper uses base::outer with identical orientation and output semantics.
+#' @rdname math_utilities
+#' @export
 outer_add <- function(x, y, operator = "+", use_cpp = TRUE) {
   if (!identical(operator, "+")) {
     stop("outer_add currently supports only operator = '+'.", call. = FALSE)
@@ -455,11 +498,11 @@ outer_add <- function(x, y, operator = "+", use_cpp = TRUE) {
   }
 
   result <- NULL
-  if (use_cpp && exists("outer_add_cpp", mode = "function", inherits = TRUE)) {
+  if (use_cpp && exists("outer_add_cpp", mode = "function", inherits = TRUE, envir = environment())) {
     compiled_outer_add <- get(
       "outer_add_cpp",
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )
     compiled_result <- tryCatch(
       list(
@@ -494,6 +537,8 @@ outer_add <- function(x, y, operator = "+", use_cpp = TRUE) {
 # Translation-only alignment uses the optional compiled implementation when it
 # is available. Every other path uses BLAS-backed R matrix operations. X may be
 # padded with zero columns when X_star has a larger embedding dimension.
+#' @rdname math_utilities
+#' @export
 procrustes <- function(
     X,
     X_star,
@@ -564,11 +609,11 @@ procrustes <- function(
 
   native_result <- NULL
   if (translate && !dilate && use_cpp &&
-      exists("procrustes_translated_cpp", mode = "function", inherits = TRUE)) {
+      exists("procrustes_translated_cpp", mode = "function", inherits = TRUE, envir = environment())) {
     compiled_procrustes <- get(
       "procrustes_translated_cpp",
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )
     compiled_result <- tryCatch(
       list(
@@ -655,6 +700,8 @@ procrustes <- function(
 #
 # This is the edge/entry density called "sparsity" by the decomposition APIs.
 # The explicit name avoids ambiguity with the fraction of zero entries.
+#' @rdname math_utilities
+#' @export
 matrix_density <- function(A) {
   if (is.null(dim(A)) || length(dim(A)) != 2L) {
     stop("A must be a matrix-like object.", call. = FALSE)
@@ -670,6 +717,8 @@ matrix_density <- function(A) {
 }
 
 # Test matrix symmetry for both base and Matrix-package matrix classes.
+#' @rdname math_utilities
+#' @export
 is_symmetric_matrix <- function(A) {
   if (inherits(A, "Matrix")) {
     if (!requireNamespace("Matrix", quietly = TRUE)) {
@@ -688,6 +737,8 @@ is_symmetric_matrix <- function(A) {
 # When tau is positive, regularize the adjacency before forming the Laplacian:
 # A_tau = A + tau * mean(deg) / n. Thus tau is dimensionless, tau = 1 adds
 # one average degree across every row, and tau = 0 recovers the usual matrix.
+#' @rdname math_utilities
+#' @export
 graph_laplacian <- function(A, normalized = TRUE, tau = 0) {
   if (is.null(dim(A)) || length(dim(A)) != 2L || nrow(A) != ncol(A)) {
     stop("A must be a square matrix-like object.", call. = FALSE)
@@ -766,6 +817,8 @@ graph_laplacian <- function(A, normalized = TRUE, tau = 0) {
 # unsuccessful unless force_engine is TRUE. The irlba option is retained for
 # input compatibility but is redirected because an SVD is not a signed
 # eigendecomposition. `scale_by = "sparsity"` uses matrix_density(A).
+#' @rdname math_utilities
+#' @export
 eig_decomp <- function(
     A,
     d,
@@ -940,6 +993,8 @@ eig_decomp <- function(
 # Partial engines fall back to base::svd when unavailable or unsuccessful
 # unless force_engine is TRUE. Singular values are non-negative, so the value
 # and magnitude orderings are equivalent and both are retained for API parity.
+#' @rdname math_utilities
+#' @export
 singular_decomp <- function(
     A,
     d,
@@ -1119,6 +1174,8 @@ singular_decomp <- function(
 # a diagonal matrix or using the general matrix-multiplication operator. The
 # default [0, 1] bounds produce a probability-matrix estimate. Use infinite
 # bounds to obtain the unmodified truncated-SVD reconstruction.
+#' @rdname math_utilities
+#' @export
 truncated_svd_reconstruct <- function(
     A,
     d,
@@ -1162,6 +1219,8 @@ truncated_svd_reconstruct <- function(
 # This historical variant sets d = ceiling(n^(1/3)), computes the corresponding
 # truncated SVD, and clips every reconstructed entry to [0, 1]. Its public name
 # is shortened to `usvt` under the project naming rules.
+#' @rdname math_utilities
+#' @export
 usvt <- function(
     A,
     lower_clip = 0,

@@ -4,10 +4,11 @@
 # fit every candidate on every overlapping subnetwork, exactly reparameterize
 # the fitted inner-product LSM as a squared-distance LSM, rigidly align each fit
 # to the first split through the overlap, and evaluate every unordered pair of
-# non-overlap pieces. Source the numbered helpers, x0_helpers.R, and
-# x1_sonnet.R before this file.
+# non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an LSM latent dimension by overlapping-subnetwork cross-validation.
+#' @rdname model_selection
+#' @export
 netcrop_lsm <- function(
     A,
     d_candidates,
@@ -40,12 +41,11 @@ netcrop_lsm <- function(
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files, x0_helpers.R, and x1_sonnet.R ",
-      "before x4_netcrop_lsm.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -224,10 +224,10 @@ netcrop_lsm <- function(
   )
 
   selected_loss_functions <- lapply(losses, function(loss_name) {
-    if (!exists(loss_name, mode = "function", inherits = TRUE)) {
+    if (!exists(loss_name, mode = "function", inherits = TRUE, envir = environment())) {
       stop("Loss function not found: ", loss_name, ".", call. = FALSE)
     }
-    get(loss_name, mode = "function", inherits = TRUE)
+    get(loss_name, mode = "function", inherits = TRUE, envir = environment())
   })
   names(selected_loss_functions) <- losses
   bundled_loss_names <- intersect(
@@ -750,6 +750,8 @@ netcrop_lsm <- function(
 }
 
 # Print the selected LSM dimension for every requested loss.
+#' @rdname model_selection
+#' @export
 print.netcrop_lsm <- function(x, ...) {
   cat("NETCROP results for latent-space models\n")
   cat("---------------------------------------\n")
@@ -758,6 +760,8 @@ print.netcrop_lsm <- function(x, ...) {
 }
 
 # Summarize an LSM NETCROP fit.
+#' @rdname model_selection
+#' @export
 summary.netcrop_lsm <- function(object, ...) {
   result <- list(
     call = object$call,
@@ -779,6 +783,8 @@ summary.netcrop_lsm <- function(object, ...) {
 }
 
 # Print an LSM NETCROP summary.
+#' @rdname model_selection
+#' @export
 print.summary.netcrop_lsm <- function(x, ...) {
   cat("Summary of NETCROP latent-space-model dimension selection\n")
   cat("---------------------------------------------------------\n")
@@ -809,6 +815,8 @@ print.summary.netcrop_lsm <- function(x, ...) {
 }
 
 # Plot LSM CV loss curves, optionally aggregating across repetitions.
+#' @rdname model_selection
+#' @export
 plot.netcrop_lsm <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)

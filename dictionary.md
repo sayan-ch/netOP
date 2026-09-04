@@ -1,6 +1,6 @@
 # Function Dictionary
 
-This is the living function reference for `SONNET_unified_experimental`. It covers every
+This is the living function reference for the `netOP` package. It covers every
 top-level named R function, every named C++ helper, and every Rcpp export.
 Anonymous and lexically nested closures are implementation details of their
 owning function and are not listed as separate APIs.
@@ -11,29 +11,29 @@ its arguments, return value, dependencies, or behavior changed.
 ## File tree
 
 ```text
-SONNET_unified_experimental/
-├── 01_basic_helpers.R       Cross-platform execution, RAM, and simulation helpers
-├── 02_math_helpers.R        Losses, transforms, alignment, and decompositions
-├── 02_math_helpers.cpp      Optional math accelerators exposed through Rcpp
-├── 03_network_utils.R       Components and shortest-path utilities
-├── 03_network_utils.cpp     Optional network-algorithm accelerators
-├── 04_network_generator.R   Network I/O and random graph generators
-├── 05_embedders.R           Spectral embedding and latent-space fitting
-├── 05_embedders.cpp         Optional latent-space PGD accelerator
-├── 06_estimators.R          Network-model parameter estimators
-├── x0_helpers.R             SONNET and NETCROP parameter/splitting helpers
-├── x1_sonnet.R              SONNET fitting and S3 methods
-├── x2_netcrop_bm.R          NETCROP block-model selection and S3 methods
-├── x3_netcrop_rdpg.R        NETCROP symmetric-RDPG selection and S3 methods
-├── x4_netcrop_lsm.R         NETCROP latent-space-model selection and S3 methods
-├── x4_netcrop_lsm_copy.R    Non-overwriting copy of reparameterized LSM NETCROP
-├── x4_netcrop_lsm_copy2.R   Isolated scalar squared-distance LSM pipeline
-├── x5_netcrop_regularizer.R NETCROP spectral-regularizer cross-validation
-├── x6_other_algos.R         Stabilized ECV/NCV, DKEST, and oracle regularization tools
-├── source_all.R              Interactive ordered selector for sourcing R files
-├── Archive.zip               Preserved source archive from the copied directory
-├── NAMING_CONVENTION.md     Mandatory naming and implementation rules
-└── dictionary.md            This living function reference
+netOP/
+├── DESCRIPTION, NAMESPACE   Package metadata and generated namespace
+├── R/
+│   ├── 01_basic_helpers.R through 06_estimators.R
+│   ├── x0_helpers.R through x6_other_algos.R
+│   ├── RcppExports.R         Generated internal compiled wrappers
+│   ├── api-docs.R            Shared public roxygen topics
+│   └── netOP-package.R       Package documentation and native registration
+├── src/
+│   ├── 02_math_helpers.cpp
+│   ├── 03_network_utils.cpp
+│   ├── 05_embedders.cpp
+│   └── RcppExports.cpp       Generated registered interfaces
+├── tests/testthat/           Correctness, parity, API, and workflow tests
+├── vignettes/                Lightweight getting-started workflow
+├── inst/benchmarks/          Authentic non-check benchmark programs
+├── inst/API                  Explicit public export allowlist
+├── inst/CITATION             Package and method citations
+├── inst/COPYRIGHTS           File-level licensing/provenance inventory
+├── inst/LICENSE.note         Installed copy of the upstream-code notice
+├── README.md, NEWS.md        User-facing package and release documentation
+├── NAMING_CONVENTION.md      Mandatory naming and implementation rules
+└── dictionary.md             This living function reference
 ```
 
 ## Shared argument conventions
@@ -63,17 +63,20 @@ otherwise.
 | `average_degree_method` | Defaults to `"naive"`, the historical one-step or iterative approximation; `"calibrated"` targets the final expected degree. |
 | `align_with` | Optional reference embedding used for rotation-only Procrustes alignment. |
 
-## `source_all.R`
+## Visibility and installed-package behavior
 
-Location: [`source_all.R`](./source_all.R)
-
-| Function | Description and use | Arguments | Returns |
-|---|---|---|---|
-| `source_all()` | Detects the directory containing `source_all.R`, lists every other `.R` file alphabetically, and interactively accepts serial numbers in the desired source order. Enter `0` alone for every file alphabetically or `-1` alone for none. The selector excludes itself to prevent recursion. It runs automatically when `source_all.R` is sourced in an interactive R session and can be called programmatically in non-interactive sessions. | `selection = NULL`: prompt, ordered integer vector, or comma/space-separated string; `envir = parent.frame()`: sourcing environment; `echo = FALSE`; `verbose = TRUE`. | Invisibly, the ordered absolute paths that were sourced, or an empty character vector. |
+Functions described as internal, validation helpers, splitters, raw Rcpp
+wrappers, legacy ECV routines, and comparison dispatch helpers are namespace
+internal. S3 methods are registered but are not ordinary exports. All other
+user-facing rows are exported and are listed exactly in `inst/API`; generated
+help topics contain the installed signatures and argument defaults. Package
+loading resolves source relationships, so no user sourcing order or
+`sourceCpp()` call is required. Compiled wrappers use registered symbols and
+fall back through their documented R-facing functions.
 
 ## `01_basic_helpers.R`
 
-Location: [`01_basic_helpers.R`](./01_basic_helpers.R)
+Location: [`R/01_basic_helpers.R`](./R/01_basic_helpers.R)
 
 ### Public functions
 
@@ -92,11 +95,11 @@ Location: [`01_basic_helpers.R`](./01_basic_helpers.R)
 | `report_ram_preflight()` | Reporting utility used only by high-level algorithms. Multiplies the largest per-operation estimate by the counted operations and concurrent cores, then warns when the deliberately overestimated total exceeds available RAM or availability is unknown. | `estimated_bytes`; `operation`; `operation_count`; `ncores`; optional `detail`. | Invisible diagnostic list. |
 | `report_ram_formula()` | Reporting utility used only by high-level algorithms. Prints every additive RAM term as `(per-operation estimate x sequential operations) x parallel operations`, totals the terms conservatively, and warns when the total exceeds available RAM or availability is unknown. | `terms`: list of estimates, sequential counts, parallel counts, and labels; `operation`; optional `detail`. | Invisible diagnostic list containing normalized terms, total estimate, and available RAM. |
 | `measure_peak_ram()` | Runs an expression or function exactly once through `peakRAM::peakRAM`, while capturing the original result. Use as `measure_peak_ram({ expression })` or `measure_peak_ram(FUN, ...)`. Requires `peakRAM`. | `process`: unevaluated expression or function; `...`: arguments used only when `process` resolves to a function. | List with `result` and one-row `metrics` containing `elapsed_seconds`, `total_ram_used_mib`, and `peak_ram_used_mib`. |
-| `run_simulations()` | Repeats `one_simulation`, manages seeds, optional outer-loop parallelism, progress, errors, resource measurements, and resumable RDS results. The outer loop is sequential by default because simulation methods often parallelize internally. | `one_simulation`: function accepting named `simulation`; `nsim`: repetitions; `...`: forwarded inputs; `use_parallel_simulations`: parallelize outer loop; `ncores_outer`: outer workers; `seed` or `seeds`: base or explicit seeds; `results_file`: optional RDS path; `action`: `"replace"`, `"resume"`, or `"archive"`; `retry_failed`: rerun failed records; `continue_on_error`: continue after failure; `measure_resources`: append elapsed time and peak RAM; `show_progress`: print completion messages; `force_windows`: select Windows backend. | List of simulation records; invisibly returned. Each record contains simulation number, seed, success, elapsed time, peak RAM, result, and error. |
+| `run_simulations()` | Repeats `one_simulation`, manages seeds, optional outer-loop parallelism, progress, errors, resource measurements, and resumable RDS results. The outer loop is sequential by default because simulation methods often parallelize internally. Resuming requires a caller-created or otherwise trusted RDS file. | `one_simulation`: function accepting named `simulation`; `nsim`: repetitions; `...`: forwarded inputs; `use_parallel_simulations`: parallelize outer loop; `ncores_outer`: outer workers; `seed` or `seeds`: base or explicit seeds; `results_file`: optional trusted RDS path; `action`: `"replace"`, `"resume"`, or `"archive"`; `retry_failed`: rerun failed records; `continue_on_error`: continue after failure; `measure_resources`: append elapsed time and peak RAM; `show_progress`: print completion messages; `force_windows`: select Windows backend. | List of simulation records; invisibly returned. Each record contains simulation number, seed, success, elapsed time, peak RAM, result, and error. |
 
 ## `02_math_helpers.R`
 
-Location: [`02_math_helpers.R`](./02_math_helpers.R)
+Location: [`02_math_helpers.R`](./R/02_math_helpers.R)
 
 ### Losses and scalar/vector transforms
 
@@ -153,10 +156,10 @@ Location: [`02_math_helpers.R`](./02_math_helpers.R)
 
 ## `02_math_helpers.cpp`
 
-Location: [`02_math_helpers.cpp`](./02_math_helpers.cpp)
+Location: [`02_math_helpers.cpp`](./src/02_math_helpers.cpp)
 
-Compile with `Rcpp::sourceCpp("02_math_helpers.cpp")`. All exports have R
-fallbacks in `02_math_helpers.R`.
+Compiled at package installation and registered through generated Rcpp
+interfaces. All exports have R fallbacks in `R/02_math_helpers.R`.
 
 | Function | Visibility | Description and arguments | Returns/use |
 |---|---|---|---|
@@ -166,7 +169,7 @@ fallbacks in `02_math_helpers.R`.
 
 ## `03_network_utils.R`
 
-Location: [`03_network_utils.R`](./03_network_utils.R)
+Location: [`03_network_utils.R`](./R/03_network_utils.R)
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -179,10 +182,10 @@ Location: [`03_network_utils.R`](./03_network_utils.R)
 
 ## `03_network_utils.cpp`
 
-Location: [`03_network_utils.cpp`](./03_network_utils.cpp)
+Location: [`03_network_utils.cpp`](./src/03_network_utils.cpp)
 
-Compile with `Rcpp::sourceCpp("03_network_utils.cpp")`. The R-facing utilities
-validate inputs and fall back to R when these exports are absent or fail.
+Compiled at package installation. The R-facing utilities validate inputs and
+fall back to R when these registered internal routines are absent or fail.
 
 | Function | Visibility | Description and arguments | Returns/use |
 |---|---|---|---|
@@ -201,7 +204,7 @@ validate inputs and fall back to R when these exports are absent or fail.
 
 ## `04_network_generator.R`
 
-Location: [`04_network_generator.R`](./04_network_generator.R)
+Location: [`04_network_generator.R`](./R/04_network_generator.R)
 
 All public network generators return `A` directly. Generated truth is stored in
 the lightweight `generator_parameters` attribute and retrieved with
@@ -228,7 +231,7 @@ attached because that would defeat sparse-memory savings.
 | `validate_network_for_io()` | Internal square, finite numeric matrix validator for I/O. | `A`. | `invisible(TRUE)` or an error. |
 | `is_symmetric_network_matrix()` | Namespace-safe symmetry check for dense and sparse matrices. | `A`; `tolerance`: numerical comparison tolerance. | Single logical. |
 | `resolve_network_format()` | Resolves `"auto"`, `"csv"`, or `"tsv"` from the explicit choice/file extension. | `file`; `format`. | `"csv"` or `"tsv"`. |
-| `write_network()` | Writes an edge list with node pairs in the first two columns and optional weights in the third. Metadata preserves isolated nodes. Undirected files store one upper/lower triangle including loops. | `A`; `file`; `directed`: explicit or inferred; `weighted`: explicit or inferred; `triangle`: `"upper"`/`"lower"`; `format`; `include_header`; `tolerance`. | Input file path, invisibly. |
+| `write_network()` | Writes an edge list with node pairs in the first two columns and optional weights in the third. Metadata preserves isolated nodes. Undirected files store one upper/lower triangle including loops. Existing paths are rejected unless replacement is explicit. | `A`; `file`; `directed`: explicit or inferred; `weighted`: explicit or inferred; `triangle`: `"upper"`/`"lower"`; `format`; `include_header`; `overwrite = FALSE`; `tolerance`. | Input file path, invisibly. |
 | `read_network()` | Reads two- or three-column edge lists into dense/general sparse adjacency. Undirected matrices are formed with `A + t(A)` and loops added once. Rejects duplicate pairs. | `file`; `representation`; `directed`, `weighted`: explicit, metadata-derived, or default; `n`: optional dimension for isolates; `format`; `has_header`. | Dense matrix or general `dgCMatrix`. |
 
 ### Probability and average-degree helpers
@@ -268,10 +271,10 @@ attached because that would defeat sparse-memory savings.
 
 ## `05_embedders.R`
 
-Location: [`05_embedders.R`](./05_embedders.R)
+Location: [`05_embedders.R`](./R/05_embedders.R)
 
-Source `02_math_helpers.R` first. The R-facing PGD function works without the
-compiled file and automatically falls back after absence or runtime failure.
+The R-facing PGD function works without the compiled routine and automatically
+falls back after absence or runtime failure.
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -281,9 +284,10 @@ compiled file and automatically falls back after absence or runtime failure.
 
 ## `05_embedders.cpp`
 
-Location: [`05_embedders.cpp`](./05_embedders.cpp)
+Location: [`05_embedders.cpp`](./src/05_embedders.cpp)
 
-Compile with `Rcpp::sourceCpp("05_embedders.cpp")`.
+Compiled at package installation and registered through generated Rcpp
+interfaces.
 
 | Function | Visibility | Description and arguments | Returns/use |
 |---|---|---|---|
@@ -295,22 +299,22 @@ Compile with `Rcpp::sourceCpp("05_embedders.cpp")`.
 
 ## `06_estimators.R`
 
-Location: [`06_estimators.R`](./06_estimators.R)
+Location: [`06_estimators.R`](./R/06_estimators.R)
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
 | `estimate_sbm()` | Estimates SBM block means from a full adjacency or a common rectangular NCV layout. The full undirected path computes only one block triangle. Rectangular denominators count the dyads actually present, genuine self-pairs are identified from original node indices, and undirected sufficient statistics pool both available orientations. | `A`; `g`; `K`; optional `fold_nodes`; `directed`; `self_loops`; `validate_inputs = TRUE`: skip repeated full matrix/label scans only after high-level validation. | Named `K` by `K` block-mean matrix `B_hat`. |
 | `estimate_dcbm()` | Unified plug-in/spectral estimator of DCBM block and degree parameters for full networks and four common NCV matrix layouts. Supplied norms avoid recomputation. | `A`; `g`, `K`; `method`; `fold_nodes`; `row_norm`; `psi_omit`; `stabilizer`; `spectral_engine`, `spectral_options`; `validate_inputs = TRUE`: permit an audited high-level fast path. | List with named block matrix `B_hat` and node degree parameters `psi_hat`. |
-| `estimate_sbm_Phat()` | Calls `estimate_sbm()` and expands its block estimates into node-pair probabilities. Returns all-node probabilities normally and fold-by-fold probabilities in NCV mode. | Estimator arguments `A`, `g`, `K`, `fold_nodes`, `directed`, `self_loops`; `lower_clip`, `upper_clip`: finite output bounds. | Square probability matrix `P_hat` for the target nodes. |
-| `estimate_dcbm_Phat()` | Calls `estimate_dcbm()` and reconstructs `P_hat = tcrossprod(psi_hat) * B_hat[g, g]`. Returns all nodes normally, retained trailing nodes after `psi_omit`, or fold nodes in NCV mode. | All `estimate_dcbm()` arguments; `self_loops`: retain/zero the output diagonal; `lower_clip`, `upper_clip`: finite output bounds. | Square probability matrix `P_hat` for the estimated nodes. |
+| `estimate_sbm_P_hat()` | Calls `estimate_sbm()` and expands its block estimates into node-pair probabilities. Returns all-node probabilities normally and fold-by-fold probabilities in NCV mode. | Estimator arguments `A`, `g`, `K`, `fold_nodes`, `directed`, `self_loops`; `lower_clip`, `upper_clip`: finite output bounds. | Square probability matrix `P_hat` for the target nodes. |
+| `estimate_dcbm_P_hat()` | Calls `estimate_dcbm()` and reconstructs `P_hat = tcrossprod(psi_hat) * B_hat[g, g]`. Returns all nodes normally, retained trailing nodes after `psi_omit`, or fold nodes in NCV mode. | All `estimate_dcbm()` arguments; `self_loops`: retain/zero the output diagonal; `lower_clip`, `upper_clip`: finite output bounds. | Square probability matrix `P_hat` for the estimated nodes. |
 | `label_match_greedy()` | Relabels estimated communities to agree with a standard labeling. Identity and binary cases use exact shortcuts. The default deterministic greedy method repeatedly takes the largest remaining overlap; the optional dependency-free Hungarian method finds a globally optimal assignment. The audited mapping direction is source label to standard label. | `match_this`: labels to transform; `standard`: target labels; `K`: label range; `algorithm`: `"greedy"` (default) or `"hungarian"`; `return_mapping`: include assignment diagnostics. | List with `matched_labels` and proportional `mismatch_rate`; when requested, also source-to-standard `mapping`, achieved `agreement`, and overlap matrix. |
 | `label_match_brute_force()` | Checks all `K!` source-to-standard label permutations, generated recursively without storing a factorial-size permutation matrix. For `K > 8`, interactive use prompts before proceeding; non-interactive use stops unless `confirm_large = TRUE`. Prefer `label_match_greedy()` for large `K`. | `match_this`, `standard`, `K`: matching inputs; `return_mapping`: include diagnostics; `confirm_large`: `NULL` prompts interactively, `TRUE` explicitly continues, and `FALSE` cancels when `K > 8`. | List with `matched_labels` and proportional `mismatch_rate`; when requested, also mapping, agreement, overlap table, and number of permutations evaluated. |
 
 ## `x1_sonnet.R`
 
-Location: [`x1_sonnet.R`](./x1_sonnet.R)
+Location: [`x1_sonnet.R`](./R/x1_sonnet.R)
 
-Source `x0_helpers.R` before calling the SONNET fitting functions.
+Helper relationships are resolved inside the installed namespace.
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -324,10 +328,10 @@ Source `x0_helpers.R` before calling the SONNET fitting functions.
 
 ## `x0_helpers.R`
 
-Location: [`x0_helpers.R`](./x0_helpers.R)
+Location: [`x0_helpers.R`](./R/x0_helpers.R)
 
-This file is self-contained and is sourced before `x1_sonnet.R` under the
-alphabetical `source_all.R` order.
+These partition helpers are loaded into the installed namespace without a
+user-visible source-order requirement.
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -340,11 +344,11 @@ alphabetical `source_all.R` order.
 
 ## `x2_netcrop_bm.R`
 
-Location: [`x2_netcrop_bm.R`](./x2_netcrop_bm.R)
+Location: [`x2_netcrop_bm.R`](./R/x2_netcrop_bm.R)
 
-Source the numbered helpers, `x0_helpers.R`, and `x1_sonnet.R` first. The core algorithm uses
-base R plus the dependencies already required by the selected decomposition,
-clustering, and matrix representation. Plotting optionally requires `ggplot2`.
+The core algorithm uses base R plus the dependencies required by the selected
+decomposition, clustering, and matrix representation. Plotting optionally
+requires `ggplot2`.
 Periods in the S3 method names below are required by R method dispatch and are
 external-interface exceptions to the underscore naming rule.
 
@@ -358,10 +362,9 @@ external-interface exceptions to the underscore naming rule.
 
 ## `x3_netcrop_rdpg.R`
 
-Location: [`x3_netcrop_rdpg.R`](./x3_netcrop_rdpg.R)
+Location: [`x3_netcrop_rdpg.R`](./R/x3_netcrop_rdpg.R)
 
-Source the numbered helpers, `x0_helpers.R`, and `x1_sonnet.R` first. This
-variant supports symmetric, non-negative, loop-free adjacency matrices.
+This variant supports symmetric, non-negative, loop-free adjacency matrices.
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -373,10 +376,9 @@ variant supports symmetric, non-negative, loop-free adjacency matrices.
 
 ## `x4_netcrop_lsm.R`
 
-Location: [`x4_netcrop_lsm.R`](./x4_netcrop_lsm.R)
+Location: [`x4_netcrop_lsm.R`](./R/x4_netcrop_lsm.R)
 
-Source the numbered helpers, `x0_helpers.R`, and `x1_sonnet.R` first. This
-variant requires a symmetric, binary, loop-free adjacency matrix. Its LSM fits
+This variant requires a symmetric, binary, loop-free adjacency matrix. Its LSM fits
 are dense even when the supplied adjacency is sparse. Periods in S3 method
 names are required by R method dispatch and are external-interface exceptions
 to the underscore naming rule.
@@ -389,44 +391,9 @@ to the underscore naming rule.
 | `print.summary.netcrop_lsm()` | Prints the LSM NETCROP summary and its per-repetition and overall selections. | `x`; `...`: S3 compatibility. | Input summary invisibly. |
 | `plot.netcrop_lsm()` | Plots penalized CV loss against `d`; the default aggregates repetitions with mean curves and one-standard-deviation ribbons, while the unaggregated view distinguishes repetitions. Arbitrary and singleton candidate sets are supported. | `x`; `aggregate = TRUE`; `...`: S3 compatibility. | `ggplot` object; requires `ggplot2`. |
 
-## `x4_netcrop_lsm_copy.R`
-
-Location: [`x4_netcrop_lsm_copy.R`](./x4_netcrop_lsm_copy.R)
-
-This is a non-overwriting copy of the main reparameterized LSM NETCROP
-implementation. Its distinct function and class names allow both files to be
-sourced without replacing the main `netcrop_lsm()` interfaces.
-
-| Function | Description and use | Arguments | Returns |
-|---|---|---|---|
-| `netcrop_lsm_reparameterized()` | Copy of `netcrop_lsm()` using the unchanged `lsm_pgd()`, exact inner-product-to-distance reparameterization, rigid alignment with invariant `gamma`, and squared-distance held-out predictions. | Same arguments and defaults as `netcrop_lsm()`. | Classed `netcrop_lsm_reparameterized` result equivalent in structure to `netcrop_lsm`. |
-| `print.netcrop_lsm_reparameterized()` | Prints overall selected dimensions. | `x`; `...`. | Input invisibly. |
-| `summary.netcrop_lsm_reparameterized()` | Summarizes the copied NETCROP result. | `object`; `...`. | Classed summary object. |
-| `print.summary.netcrop_lsm_reparameterized()` | Prints the copied result summary. | `x`; `...`. | Input invisibly. |
-| `plot.netcrop_lsm_reparameterized()` | Plots copied NETCROP loss curves. | `x`; `aggregate = TRUE`; `...`. | `ggplot` object. |
-
-## `x4_netcrop_lsm_copy2.R`
-
-Location: [`x4_netcrop_lsm_copy2.R`](./x4_netcrop_lsm_copy2.R)
-
-This isolated alternative implements the scalar model
-`logit(P_ij) = alpha - ||Z_i-Z_j||^2` throughout generation, estimation,
-rigid alignment, and held-out NETCROP prediction. Its names do not replace any
-existing generator, PGD fitter, NETCROP function, or S3 method.
-
-| Function | Description and use | Arguments | Returns |
-|---|---|---|---|
-| `generate_lsm_specific()` | Generates an undirected network directly from the scalar squared-distance LSM. Missing or supplied positions use the existing validation/generation and optional centering/Frobenius normalization. Missing `alpha` draws one scalar from `-Uniform(1,3)/2`. Optional average-degree adjustment is a global scalar-intercept shift. | `n`, `d`, `K = 1L`, labels/proportions; scalar `alpha = NULL`; `Z = NULL`; `normalize_Z = TRUE`; latent-generation bounds; average-degree controls; clipping; representation; loops; seed; workers. | Adjacency with generator metadata containing scalar intercept, positions, labels, degree information, and the explicit model formula. |
-| `lsm_pgd_specific()` | Fits `logit(P_ij) = alpha - ||Z_i-Z_j||^2` directly by projected gradient ascent. It uses a double-centered USVT-logit initialization, estimates one scalar intercept, updates the exact squared-distance gradients, and recenters positions after every iteration. `use_cpp` is accepted for downstream interface consistency but no separate compiled accelerator is used. | Binary symmetric zero-diagonal `A`; `d`; `step_size = 0.3`; `niter = 100L`; `trace = FALSE`; optional `Z_init` and scalar `alpha_init`; `epsilon = 1e-6`; `use_cpp = TRUE`; `ram_check = FALSE`. | `Z_hat`, scalar `alpha_hat`, zero-diagonal `P_hat`, objective history, resolved step sizes, and `use_cpp = FALSE`. |
-| `netcrop_lsm_specific()` | Selects dimension under the same scalar squared-distance model. It calls only `lsm_pgd_specific()`, rigidly aligns positions with rotation and translation but no dilation or intercept transformation, averages the two scalar subnetwork intercept estimates for each held-out pair, and predicts as `plogis(alpha_hat - squared_distance)`. It retains automatic parameter selection, explicit-parameter priority, detailed verbose stage messages, dimension-based penalty, cross-platform execution, RAM preflight, and intermediate retention. | Same NETCROP controls as `netcrop_lsm()` with distinct model-specific fitting semantics. | Classed `netcrop_lsm_specific` result with losses, selections, partitions, optional fits/alignments, options, workers, timings, and diagnostics. |
-| `print.netcrop_lsm_specific()` | Prints overall selected model-specific LSM dimensions. | `x`; `...`. | Input invisibly. |
-| `summary.netcrop_lsm_specific()` | Summarizes the model-specific NETCROP result. | `object`; `...`. | Classed summary object. |
-| `print.summary.netcrop_lsm_specific()` | Prints the model-specific NETCROP summary. | `x`; `...`. | Input invisibly. |
-| `plot.netcrop_lsm_specific()` | Plots model-specific penalized CV losses. | `x`; `aggregate = TRUE`; `...`. | `ggplot` object. |
-
 ## `x5_netcrop_regularizer.R`
 
-Location: [`x5_netcrop_regularizer.R`](./x5_netcrop_regularizer.R)
+Location: [`x5_netcrop_regularizer.R`](./R/x5_netcrop_regularizer.R)
 
 | Function | Description and use | Arguments | Returns |
 |---|---|---|---|
@@ -440,7 +407,7 @@ Location: [`x5_netcrop_regularizer.R`](./x5_netcrop_regularizer.R)
 
 ## `x6_other_algos.R`
 
-Location: [`x6_other_algos.R`](./x6_other_algos.R)
+Location: [`x6_other_algos.R`](./R/x6_other_algos.R)
 
 The three low-level ECV functions preserve the supplied randnet-derived code,
 including its legacy dotted external identifiers. The only changes within
@@ -460,9 +427,9 @@ clustering engine independently of which tuner produced each selected tau.
 | `holdout.evaluation.fast.all()` | Preserved low-level ECV fold evaluator. It removes selected upper-triangle dyads, performs successive truncated-SVD reconstructions, fits SBM and degree-corrected candidates, and evaluates the requested canonical losses. At DCBM `K = 1`, SSE now uses the same plug-in `P.hat` used by binary deviance and AUC-as-loss. Legacy identifiers and raw component names are retained. | Legacy arguments `holdout.index`, `A`, `max.K`, `tau = 0`, `dc.est = 2`, `p.sample = 1`; `loss = c("sse", "bin_dev", "auc_as_loss")`. | Legacy list of per-`K` SBM/DCBM loss vectors and diagnostics. |
 | `iter.SVD.core.fast.all()` | Preserved low-level successive truncated-SVD reconstruction used by ECV. It optionally converts to sparse storage, treats missing entries as zero, rescales by the sampling probability, and retains raw and clipped reconstructions through `Kmax`. | Legacy arguments `A`, `Kmax`, `tol = 1e-5`, `max.iter = 100`, `sparse = TRUE`, `tau = 0`, `p.sample = 1`. | List of SVD components plus raw and thresholded reconstructions for every rank. |
 | `ECV.BM()` | Preserved single-repetition ECV driver. It samples `cv` holdouts, calls the low-level evaluator, aggregates legacy loss matrices, and returns its original raw selection structure. Only canonical loss names replace the pasted names. | Legacy arguments `A`, `max.K`, `cv = 3`, `holdout.p = 0.1`, `tau = 0`, `dc.est = 2`, `loss = c("sse", "bin_dev", "auc_as_loss")`, `ncore = 1`, `seed = 100`. | Original ECV list of raw fold matrices, aggregated loss vectors, and legacy best-model strings. |
-| `ecv_stability_bm()` | Validated high-level repeated ECV block-model selector using only the plug-in DCBM estimator (`dc.est = 2`). It checks binary undirected loop-free input, candidate and sampling feasibility, dependencies, seeds, workers, and requested losses before calling the preserved routines. Repetitions use `uni_mclapply()` while each nested `ECV.BM()` call is sequential, preventing worker oversubscription. A private runtime environment supplies namespace-safe `mclapply`, `Matrix`, transpose, sparse-`which`, and clustering behavior required by the legacy code. It performs conservative RAM preflight, validates every raw result, optionally stops on or omits failed repetitions, converts raw fold matrices to the shared tidy loss schema, and minimizes canonical losses. When `seed = NULL`, independent valid repetition seeds are generated before parallel execution and retained in the result. | `A`; `max_K`; `train_proportion = 0.9`; `cv = 3L`; `nrep = 20L`; `tau = 0`; `losses = c("sse", "bin_dev", "auc_as_loss")`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | A classed `netcrop_blockmodel` object with `algorithm = "ECV"`, common tidy losses/selections/candidates, ECV sampling metadata and realized repetition seeds, diagnostics, worker allocation, timing, RAM report, and optional legacy raw output. |
+| `ecv_stability_blockmodel()` | Validated high-level repeated ECV block-model selector using only the plug-in DCBM estimator (`dc.est = 2`). It checks binary undirected loop-free input, candidate and sampling feasibility, dependencies, seeds, workers, and requested losses before calling the preserved routines. Repetitions use `uni_mclapply()` while each nested `ECV.BM()` call is sequential, preventing worker oversubscription. A private runtime environment supplies namespace-safe `mclapply`, `Matrix`, transpose, sparse-`which`, and clustering behavior required by the legacy code. It performs conservative RAM preflight, validates every raw result, optionally stops on or omits failed repetitions, converts raw fold matrices to the shared tidy loss schema, and minimizes canonical losses. When `seed = NULL`, independent valid repetition seeds are generated before parallel execution and retained in the result. | `A`; `max_K`; `train_proportion = 0.9`; `cv = 3L`; `nrep = 20L`; `tau = 0`; `losses = c("sse", "bin_dev", "auc_as_loss")`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | A classed `netcrop_blockmodel` object with `algorithm = "ECV"`, common tidy losses/selections/candidates, ECV sampling metadata and realized repetition seeds, diagnostics, worker allocation, timing, RAM report, and optional legacy raw output. |
 | `ncv_bm()` | Runs one corrected Chen-Lei node-CV repetition without changing its stage order: permute nodes, form rectangular training matrices and held-out fold blocks, obtain right singular vectors, cluster SBM and row-normalized DCBM representations, estimate rectangular SBM/DCBM parameters, evaluate held-out dyads, and average folds. It uses `estimate_sbm()` and `estimate_dcbm()` directly; spectral DCBM is the default. Undirected losses use one off-diagonal triangle, and probabilities are clipped consistently. | `A`; `max_K`; `cv = 3L`; `dc_est = c("spectral", "plugin")`; `tau = 0`; `use_laplacian = FALSE`; `losses = c("sse", "bin_dev", "auc_as_loss")`; standard `ncores`; `seed = NULL`; `force_windows = FALSE`; `validate_inputs = TRUE`. | List with tidy fold losses, fold-averaged candidate losses, best candidates, fold membership/sizes, permutation, and realized fold seeds. |
-| `ncv_stability_bm()` | Repeats `ncv_bm()` using `uni_mclapply()` at the outer level with sequential fold stages, spectral DCBM by default, preflight validation, deterministic or generated repetition seeds, conservative RAM reporting, strict or omission-based failure handling, and optional raw-output retention. | `A`; `max_K`; `cv = 3L`; `nrep = 20L`; `dc_est = c("spectral", "plugin")`; `tau = 0`; `use_laplacian = FALSE`; canonical `losses`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | A classed `netcrop_blockmodel` object with `algorithm = "NCV"`, common tidy losses/selections/candidates, fold and estimator metadata, failures, workers, timing, RAM report, seeds, and optional raw repetition output. |
+| `ncv_stability_blockmodel()` | Repeats `ncv_bm()` using `uni_mclapply()` at the outer level with sequential fold stages, spectral DCBM by default, preflight validation, deterministic or generated repetition seeds, conservative RAM reporting, strict or omission-based failure handling, and optional raw-output retention. | `A`; `max_K`; `cv = 3L`; `nrep = 20L`; `dc_est = c("spectral", "plugin")`; `tau = 0`; `use_laplacian = FALSE`; canonical `losses`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | A classed `netcrop_blockmodel` object with `algorithm = "NCV"`, common tidy losses/selections/candidates, fold and estimator metadata, failures, workers, timing, RAM report, seeds, and optional raw repetition output. |
 | `ecv_stability_rdpg()` | Validated repeated edge-CV selector for symmetric RDPG dimension. The three pasted lower-level functions are preserved unchanged inside an isolated environment, preventing their shared legacy SVD name from overwriting block-model ECV. The wrapper checks graph shape, symmetry, loops, values, binary-loss compatibility, rank and holdout feasibility, dependencies, seeds, workers, and requested losses; supplies namespace-safe legacy dependencies and canonical loss adapters; runs repetitions through `uni_mclapply()` with sequential folds; performs conservative dense-RAM preflight; audits each result; and supports strict or omission-based failures. Independent realized seeds are retained when `seed = NULL`. The canonical `mse` label reflects the legacy helper's mean squared error; relative comparison treats it as the same family as NETCROP `sse`. | `A`; `max_d`; `cv = 3L`; `nrep = 1L`; `train_proportion = 0.9`; `losses = c("mse", "bin_dev", "auc_as_loss")`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | A classed `netcrop_rdpg` object with `algorithm = "ECV"`, tidy repetition-averaged loss curves, selections, edge-holdout metadata, realized seeds, failures, worker allocation, timing, RAM diagnostics, and optional legacy raw output. |
 | `plot_rdpg_comparison()` | Internal implementation used by standard `plot()` dispatch for one NETCROP and one ECV RDPG output in either order. Relative mode matches compatible loss families and min-max normalizes within algorithm; raw mode requires identical loss names. | `...`: two classed `netcrop_rdpg` results; `loss_scale = c("relative", "raw")`. | `ggplot` object; requires `ggplot2`; call through `plot(netcrop_result, ecv_result)`. |
 | `dkest_tune_regularizer()` | Directly estimates tau by minimizing the DK eigenspectral ratio while preserving the supplied calculation order: regularize the observed matrix, optionally form its normalized Laplacian, cluster the fixed-`K` embedding, estimate SBM/DCBM probabilities, construct the fitted regularized matrix, and compute the residual-to-fitted eigenvalue ratio. It does not estimate or expose CV loss. The oracle `true.g` input and accuracy calculation are removed. Preflight checks cover graph validity, ranks, tau candidates, zero-degree feasibility, dependencies, seeds, workers, sparse densification, and RAM. Candidate tasks use `uni_mclapply()` and independently realized seeds; malformed clustering, eigensolver failures, zero denominators, and non-finite statistics are stopped or omitted according to policy. | `A`; fixed `K`; unique non-negative `tau_candidates`; `use_laplacian = TRUE`; `use_dcbm = TRUE`; `dcbm_est_method = c("plugin", "spectral")`; standard `ncores`; `seed = NULL`; `verbose = TRUE`; `force_windows = FALSE`; `ram_check = FALSE`; `failure_handling = c("stop", "omit")`; `retain_intermediates = c("all", "minimal")`. | Classed `netcrop_regularizer` object with `algorithm = "DKEST"`, direct `tau_hat`, selected DK statistic, per-candidate numerator/denominator/statistic table, diagnostics, realized candidate seeds, workers, timing, RAM report, and optional raw candidate output; no `cv_loss` field. |
@@ -470,6 +437,32 @@ clustering engine independently of which tuner produced each selected tau.
 | `mult_reg_sonnet()` | Runs `sonnet()` at every requested tau for one network or a matched list. It retains SONNET's current defaults, validates common dimensions, candidates, named forwarded options, protected arguments, seeds, output labels, and failures, and deliberately keeps the network-by-tau loop sequential so `ncores` parallelism remains inside SONNET. The same realized seed is reused across tau candidates within each network. | `A`: one adjacency matrix or a non-empty list with shared dimensions; `K`; unique non-negative `tau_candidates`; all SONNET controls with their current defaults; named spectral-clustering arguments through `...`; `failure_handling = c("stop", "omit")`; `retain_fits = TRUE`. | Classed `mult_reg_clustering` object containing nested labels and optional SONNET fits by network and tau, resolved parameters, task grid, diagnostics, realized network seeds, timing, and the call. |
 | `oracle_plotter()` | Computes accuracy as one minus the validated label-matching mismatch rate and plots mean accuracy. A single network produces points without error bars; multiple networks add horizontal plus/minus-one-SD bars. Without tuner outcomes it compares every candidate tau. With optional NETCROP and/or DKEST outcomes it compares engine-specific oracle accuracy with every available tuner selection: NETCROP's first repetition and optionally its repetition mean and mode for each chosen loss, plus DKEST's direct `tau_hat`. Off-grid selected values trigger an extra fit. `engines` independently selects SONNET, spectral clustering, or both, so every supplied tuner's tau is evaluated under every requested engine regardless of provenance. For outcome-derived SONNET settings, NETCROP supplies its subnetwork count and overlap but `extra_nrep` defaults to zero; explicit `sonnet_options` override all recovered defaults. | `A` and required `g_true`: one matched matrix/vector pair or same-length lists with shared dimensions; `tau_candidates`; optional `K`; `netcrop_outcomes` and `dkest_outcomes` may be single classed outputs for scalar inputs, while list inputs require matching outcome lists; `include_netcrop_mean = TRUE`; `include_netcrop_mode = TRUE`; optional `losses`; `engines = c("sonnet", "spectral_cluster")`; validated `matching_method`; brute-force confirmation; named fitter option lists; standard worker, seed, verbosity, cross-platform, and RAM controls. | Invisibly returns the rendered `ggplot`, faceted by requested engine. Raw accuracies, aggregated plotting data, effective fit metadata, and diagnostics are attached as `accuracy_data`, `plot_data`, `metadata`, and `diagnostics` attributes. |
 | `plot_blockmodel_comparison()` | Internal implementation used by standard `plot()` dispatch for two or three distinct NETCROP, ECV, and NCV outputs in any argument order. Relative mode matches compatible loss families and min-max normalizes within algorithm; raw mode requires identical loss names. | `...`: two or three classed block-model results; `loss_scale = c("relative", "raw")`. | `ggplot` object; requires `ggplot2`; call through `plot(result_1, result_2, result_3)`. |
+
+## Generated Rcpp interfaces
+
+Locations: [`R/RcppExports.R`](./R/RcppExports.R) and
+[`src/RcppExports.cpp`](./src/RcppExports.cpp).
+
+`Rcpp::compileAttributes()` generates internal R wrappers and registered C++
+entry points for `auc_cpp()`, `outer_add_cpp()`,
+`procrustes_translated_cpp()`, `connected_components_dense_cpp()`,
+`connected_components_sparse_cpp()`, `shortest_path_distances_dense_cpp()`,
+`shortest_path_distances_sparse_cpp()`, and `lsm_pgd_cpp()`. Their signatures
+and return values are recorded in the corresponding C++ sections above. None
+is exported through `netOP::`; each is reached only by a validated R wrapper.
+
+## Dependency classification
+
+| Classification | Packages and use |
+|---|---|
+| `Imports` | `Rcpp` for registered interfaces; `Matrix` for sparse matrices; `RSpectra` and `irlba` for partial decompositions; `cluster` for PAM/CLARA; `tibble` for regularizer output. |
+| `LinkingTo` | `Rcpp`, `RcppEigen`. |
+| `Suggests` | `future` and `future.apply` for Windows/multisession work; `ggplot2` for plots; `ps` for available RAM; `entropy` for an optional NMI implementation; `peakRAM` for explicit resource measurement; `testthat`, `knitr`, `rmarkdown`, and `pkgdown` for development and documentation. |
+| Development-only reference | CRAN `randnet` 1.0, used for provenance/equivalence auditing and deliberately absent from every dependency field. |
+| Removed legacy declarations | `dplyr`, `Rfast`, `data.table`, `readr`, `softImpute`, `pROC`, `IMIFA`, `rlist`, and `latentnet` were not required by active installed-package code. |
+
+The file-level license, copyright, origin, modification, and dependency-license
+inventory is maintained in `inst/COPYRIGHTS`.
 
 ## Maintenance checklist
 

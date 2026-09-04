@@ -188,6 +188,8 @@ op_splitter <- function(
 # counts are integers and (n - o) must be divisible by s. By default the
 # overlap starts at min(K^3, n - s_lower), while its upper bound n - s is
 # applied separately for each candidate s.
+#' @rdname model_selection
+#' @export
 sonnet_param_select <- function(
     n,
     K = 5L,
@@ -444,6 +446,8 @@ sonnet_param_select <- function(
 # of exactly one is replaced by 0.8 to avoid the singular upper endpoint. When
 # n is supplied, remainder nodes augment the overlap so the remaining nodes
 # divide evenly among the selected subnetworks.
+#' @rdname model_selection
+#' @export
 netcrop_param_select <- function(
     test_prop = 0.02,
     n = NULL,

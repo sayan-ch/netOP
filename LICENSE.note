@@ -1,0 +1,17 @@
+netOP is distributed under the GNU General Public License, version 2 or later.
+
+Copyright (C) 2026 Sayan Chakrabarty
+
+The ECV implementation in R/x6_other_algos.R incorporates code derived from
+randnet 1.0 by Tianxi Li, Elizaveta Levina, Ji Zhu, and Can M. Le. randnet is
+distributed under GPL (>= 2). The corresponding upstream functions in
+randnet/R/RCode.R are ECV.block(), holdout.evaluation.fast.all(),
+iter.SVD.core.fast.all(), ECV.undirected.Rank(), and
+missing.undirected.Rank.fast.all(). They correspond to the local ECV.BM(),
+holdout.evaluation.fast.all(), iter.SVD.core.fast.all(), and the legacy routines
+isolated inside ecv_stability_rdpg(). netOP changes the surrounding namespace
+integration, validation, parallel orchestration, canonical loss names, and
+public wrappers while preserving the underlying ECV mathematical procedures.
+
+See inst/COPYRIGHTS for the file-level licensing and provenance inventory and
+inst/CITATION for scholarly attribution.

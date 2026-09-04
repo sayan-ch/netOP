@@ -43,12 +43,11 @@
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source 01_basic_helpers.R, 02_math_helpers.R, 05_embedders.R, ",
-      "06_estimators.R and x0_helpers.R before calling sonnet(). Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "),
       ".",
       call. = FALSE
@@ -413,11 +412,11 @@
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_ram_helpers) > 0L) {
       stop(
-        "Source 01_basic_helpers.R before using ram_check = TRUE. Missing: ",
+        "Required RAM helpers are unavailable; reinstall netOP. Missing: ",
         paste(missing_ram_helpers, collapse = ", "),
         ".",
         call. = FALSE
@@ -962,6 +961,8 @@
 }
 
 # Fit SONNET with one overlap shared by all repetitions.
+#' @rdname model_selection
+#' @export
 sonnet_shared_overlap <- function(...) {
   result <- .sonnet_fit(..., share_overlap = TRUE)
   result$call <- match.call()
@@ -969,6 +970,8 @@ sonnet_shared_overlap <- function(...) {
 }
 
 # Fit SONNET with an independently sampled overlap in every repetition.
+#' @rdname model_selection
+#' @export
 sonnet_independent_overlap <- function(...) {
   result <- .sonnet_fit(..., share_overlap = FALSE)
   result$call <- match.call()
@@ -976,6 +979,8 @@ sonnet_independent_overlap <- function(...) {
 }
 
 # Fit either SONNET overlap variant.
+#' @rdname model_selection
+#' @export
 sonnet <- function(
     A,
     K,
@@ -1018,6 +1023,8 @@ sonnet <- function(
 }
 
 # Print a compact SONNET fit overview.
+#' @rdname model_selection
+#' @export
 print.sonnet <- function(x, ...) {
   cat("SONNET fit\n")
   cat("  Nodes:", x$parameters$n, "\n")
@@ -1057,6 +1064,8 @@ print.sonnet <- function(x, ...) {
 }
 
 # Summarize a SONNET fit.
+#' @rdname model_selection
+#' @export
 summary.sonnet <- function(object, ...) {
   maximum_membership <- vapply(
     object$membership_matrices,
@@ -1090,6 +1099,8 @@ summary.sonnet <- function(object, ...) {
 }
 
 # Print a SONNET summary.
+#' @rdname model_selection
+#' @export
 print.summary.sonnet <- function(x, ...) {
   cat("Summary of SONNET fit\n")
   cat("  Nodes:", x$n, "\n")

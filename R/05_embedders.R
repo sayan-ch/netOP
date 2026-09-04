@@ -1,10 +1,7 @@
 # Network embedding and latent-space fitting helpers
 #
-# Source 02_math_helpers.R before this file. Optional C++ acceleration for
-# lsm_pgd() can be loaded with:
-#
-Rcpp::sourceCpp("05_embedders.cpp", 
-                showOutput = FALSE, verbose = FALSE, echo = FALSE)
+# Package loading resolves helper order and registers the optional C++
+# accelerator for lsm_pgd().
 
 # Compute an adjacency spectral embedding (ASE).
 #
@@ -16,6 +13,8 @@ Rcpp::sourceCpp("05_embedders.cpp",
 # U D^(1/2) and V D^(1/2). If align_with is supplied, the left embedding is
 # aligned to it and the same orthogonal rotation is applied to the right
 # embedding, preserving their reconstructed matrix.
+#' @rdname embedding_estimating
+#' @export
 ase <- function(
     A,
     d,
@@ -23,10 +22,10 @@ ase <- function(
     reconstruct = FALSE,
     align_with = NULL,
     ram_check = FALSE) {
-  if (!exists("eig_decomp", mode = "function", inherits = TRUE) ||
-      !exists("singular_decomp", mode = "function", inherits = TRUE) ||
-      !exists("procrustes", mode = "function", inherits = TRUE)) {
-    stop("Source 02_math_helpers.R before calling ase().", call. = FALSE)
+  if (!exists("eig_decomp", mode = "function", inherits = TRUE, envir = environment()) ||
+      !exists("singular_decomp", mode = "function", inherits = TRUE, envir = environment()) ||
+      !exists("procrustes", mode = "function", inherits = TRUE, envir = environment())) {
+    stop("Required mathematical helpers are unavailable; reinstall netOP before calling ase().", call. = FALSE)
   }
   if (is.null(dim(A)) || length(dim(A)) != 2L || nrow(A) != ncol(A)) {
     stop("A must be a square matrix-like object.", call. = FALSE)
@@ -89,11 +88,11 @@ ase <- function(
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_ram_helpers) > 0L) {
       stop(
-        "Source 01_basic_helpers.R before using ram_check = TRUE. Missing: ",
+        "Required RAM helpers are unavailable; reinstall netOP. Missing: ",
         paste(missing_ram_helpers, collapse = ", "),
         ".",
         call. = FALSE
@@ -298,6 +297,8 @@ ase <- function(
 # A + t(A), following the package convention for undirected networks.
 # regularize_tau uses A_tau = A + tau * mean(deg) / n before either direct
 # decomposition or Laplacian construction.
+#' @rdname embedding_estimating
+#' @export
 spectral_cluster <- function(
     A = NULL,
     U = NULL,
@@ -449,10 +450,10 @@ spectral_cluster <- function(
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_helpers) > 0L) {
-      stop("Source 02_math_helpers.R before calling spectral_cluster().",
+      stop("Required mathematical helpers are unavailable; reinstall netOP before calling spectral_cluster().",
            call. = FALSE)
     }
     if (is.null(dim(A)) || length(dim(A)) != 2L ||
@@ -497,11 +498,11 @@ spectral_cluster <- function(
         exists,
         logical(1),
         mode = "function",
-        inherits = TRUE
+        inherits = TRUE, envir = environment()
       )]
       if (length(missing_ram_helpers) > 0L) {
         stop(
-          "Source 01_basic_helpers.R before using ram_check = TRUE. Missing: ",
+          "Required RAM helpers are unavailable; reinstall netOP. Missing: ",
           paste(missing_ram_helpers, collapse = ", "),
           ".",
           call. = FALSE
@@ -694,9 +695,9 @@ spectral_cluster <- function(
   }
 
   if (ram_check && cluster_engine == "pam" && K > 1L) {
-    if (!exists("report_ram_preflight", mode = "function", inherits = TRUE)) {
+    if (!exists("report_ram_preflight", mode = "function", inherits = TRUE, envir = environment())) {
       stop(
-        "Source 01_basic_helpers.R before using ram_check = TRUE.",
+        "Required RAM helpers are unavailable; reinstall netOP.",
         call. = FALSE
       )
     }
@@ -814,6 +815,8 @@ spectral_cluster <- function(
 # (n I + 1 1^T) alpha = rowSums(theta), and double-centering without forming an
 # n-by-n centering matrix. The diagonal is excluded from objective and gradient.
 # Optional direct initial values may replace either spectral initializer.
+#' @rdname embedding_estimating
+#' @export
 lsm_pgd <- function(
     A,
     d,
@@ -837,10 +840,10 @@ lsm_pgd <- function(
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
-    stop("Source 02_math_helpers.R before calling lsm_pgd().",
+    stop("Required mathematical helpers are unavailable; reinstall netOP before calling lsm_pgd().",
          call. = FALSE)
   }
   if (is.null(dim(A)) || length(dim(A)) != 2L || nrow(A) != ncol(A)) {
@@ -926,11 +929,11 @@ lsm_pgd <- function(
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_ram_helpers) > 0L) {
       stop(
-        "Source 01_basic_helpers.R before using ram_check = TRUE. Missing: ",
+        "Required RAM helpers are unavailable; reinstall netOP. Missing: ",
         paste(missing_ram_helpers, collapse = ", "),
         ".",
         call. = FALSE
@@ -1124,11 +1127,11 @@ lsm_pgd <- function(
   }
 
   fit <- NULL
-  if (use_cpp && exists("lsm_pgd_cpp", mode = "function", inherits = TRUE)) {
+  if (use_cpp && exists("lsm_pgd_cpp", mode = "function", inherits = TRUE, envir = environment())) {
     compiled_lsm_pgd <- get(
       "lsm_pgd_cpp",
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )
     compiled_result <- tryCatch(
       list(

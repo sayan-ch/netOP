@@ -1,6 +1,6 @@
 # Network-model estimators
 #
-# Source files are numbered only to make their intended loading order clear.
+# Package loading resolves all internal helper relationships.
 # This file currently uses base R and supports dense or Matrix-package inputs.
 
 # Estimate the block-mean matrix of an SBM from a full or NCV adjacency matrix.
@@ -19,6 +19,8 @@
 # orientations are pooled before division. This also handles folds whose
 # community composition is unbalanced. Genuine self-pairs are removed using
 # inferred original node indices rather than by assuming a square matrix.
+#' @rdname embedding_estimating
+#' @export
 estimate_sbm <- function(
     A,
     g,
@@ -188,6 +190,8 @@ estimate_sbm <- function(
 # row_norm may be either a full length(g) vector, a vector corresponding to the
 # columns of A when all row nodes also occur among those columns, or a named
 # list with numeric components row and col matching nrow(A) and ncol(A).
+#' @rdname embedding_estimating
+#' @export
 estimate_dcbm <- function(
     A,
     g,
@@ -363,11 +367,11 @@ estimate_dcbm <- function(
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_helpers) > 0L) {
       stop(
-        "Source 02_math_helpers.R before using method = 'spectral'.",
+        "Required decomposition helpers are unavailable; reinstall netOP.",
         call. = FALSE
       )
     }
@@ -509,7 +513,9 @@ estimate_dcbm <- function(
 # estimate. Otherwise return probabilities for all nodes. The function name is
 # retained exactly as requested; the returned object follows the P_hat naming
 # convention.
-estimate_sbm_Phat <- function(
+#' @rdname embedding_estimating
+#' @export
+estimate_sbm_P_hat <- function(
     A,
     g,
     K = max(g),
@@ -563,7 +569,9 @@ estimate_sbm_Phat <- function(
 # P_hat[i, j] = psi_hat[i] * psi_hat[j] * B_hat[g[i], g[j]]. In
 # NCV mode psi_hat is estimated for fold nodes, so the result is fold-by-fold.
 # With psi_omit, the result covers the retained trailing nodes.
-estimate_dcbm_Phat <- function(
+#' @rdname embedding_estimating
+#' @export
+estimate_dcbm_P_hat <- function(
     A,
     g,
     K = max(g),
@@ -637,6 +645,8 @@ estimate_dcbm_Phat <- function(
 # inputs, followed by the historical greedy maximum-overlap assignment for
 # larger K. algorithm = "hungarian" uses a dependency-free O(K^3) assignment
 # implementation and therefore maximizes total agreement globally.
+#' @rdname embedding_estimating
+#' @export
 label_match_greedy <- function(
     match_this,
     standard,
@@ -810,6 +820,8 @@ label_match_greedy <- function(
 # K!-by-K permutation matrix. Runtime remains factorial. For K > 8, an
 # interactive call requires explicit confirmation; non-interactive callers
 # must opt in with confirm_large = TRUE.
+#' @rdname embedding_estimating
+#' @export
 label_match_brute_force <- function(
     match_this,
     standard,

@@ -35,6 +35,8 @@
 #
 # Returns:
 # - A list with one result per element of X.
+#' @rdname resource_utilities
+#' @export
 uni_mclapply <- function(
     X,
     FUN,
@@ -263,6 +265,8 @@ uni_mclapply <- function(
 #
 # ps is deliberately optional. Different ps versions and operating systems use
 # slightly different field names, so check the known alternatives.
+#' @rdname resource_utilities
+#' @export
 available_ram <- function() {
   if (!requireNamespace("ps", quietly = TRUE)) {
     return(NA_real_)
@@ -283,6 +287,8 @@ available_ram <- function() {
 }
 
 # Format a non-negative byte count using binary units.
+#' @rdname resource_utilities
+#' @export
 format_bytes <- function(x) {
   if (length(x) != 1L || !is.numeric(x) || is.na(x)) {
     return("unknown")
@@ -303,6 +309,8 @@ format_bytes <- function(x) {
 }
 
 # Report estimated versus available RAM and warn above a conservative limit.
+#' @rdname resource_utilities
+#' @export
 warn_if_insufficient_ram <- function(
     estimated_bytes,
     max_fraction = 0.60,
@@ -371,6 +379,8 @@ warn_if_insufficient_ram <- function(
 }
 
 # Estimate RAM for an RSpectra Lanczos/Arnoldi decomposition.
+#' @rdname resource_utilities
+#' @export
 estimate_rspectra_ram <- function(
     n,
     K,
@@ -392,6 +402,8 @@ estimate_rspectra_ram <- function(
 }
 
 # Estimate RAM for a dense symmetric eigendecomposition.
+#' @rdname resource_utilities
+#' @export
 estimate_dense_eigen_ram <- function(
     n,
     input_already_counted = TRUE,
@@ -414,6 +426,8 @@ estimate_dense_eigen_ram <- function(
 }
 
 # Estimate RAM for a partial rectangular singular decomposition.
+#' @rdname resource_utilities
+#' @export
 estimate_partial_svd_ram <- function(
     n,
     p,
@@ -439,6 +453,8 @@ estimate_partial_svd_ram <- function(
 }
 
 # Estimate RAM for a dense rectangular singular decomposition.
+#' @rdname resource_utilities
+#' @export
 estimate_dense_svd_ram <- function(
     n,
     p,
@@ -469,6 +485,8 @@ estimate_dense_svd_ram <- function(
 }
 
 # Estimate the output and packing workspace for one dense matrix product.
+#' @rdname resource_utilities
+#' @export
 estimate_matrix_product_ram <- function(
     nrow_left,
     shared_dimension,
@@ -495,6 +513,8 @@ estimate_matrix_product_ram <- function(
 }
 
 # Estimate the decomposition selected by the audited fallback rules.
+#' @rdname resource_utilities
+#' @export
 estimate_spectral_decomp_ram <- function(
     n,
     p = n,
@@ -594,6 +614,8 @@ estimate_spectral_decomp_ram <- function(
 }
 
 # Report an algorithm-level RAM estimate, optionally across parallel workers.
+#' @rdname resource_utilities
+#' @export
 report_ram_preflight <- function(
     estimated_bytes,
     operation,
@@ -642,6 +664,8 @@ report_ram_preflight <- function(
 }
 
 # Report an additive high-level RAM formula with explicit operation factors.
+#' @rdname resource_utilities
+#' @export
 report_ram_formula <- function(terms, operation, detail = NULL) {
   if (!is.list(terms) || length(terms) < 1L) {
     stop("terms must be a non-empty list.", call. = FALSE)
@@ -745,6 +769,8 @@ report_ram_formula <- function(terms, operation, detail = NULL) {
 # Returns:
 # - A list containing the process result and a one-row metrics data frame with
 #   elapsed_seconds, total_ram_used_mib, and peak_ram_used_mib.
+#' @rdname resource_utilities
+#' @export
 measure_peak_ram <- function(process, ...) {
   if (missing(process)) {
     stop("process must be an expression or function.", call. = FALSE)
@@ -851,6 +877,8 @@ measure_peak_ram <- function(process, ...) {
 # Returns:
 # - A list of nsim simulation records, invisibly when no work remains during a
 #   resume and normally otherwise.
+#' @rdname resource_utilities
+#' @export
 run_simulations <- function(
     one_simulation,
     nsim,

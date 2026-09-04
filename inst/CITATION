@@ -1,0 +1,48 @@
+citHeader("To cite netOP or a method implemented by netOP, use the relevant entry:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "netOP: Network Analysis and Model Selection Tools",
+  author = person("Sayan", "Chakrabarty"),
+  year = "2026",
+  note = "R package version 0.0.0.9000",
+  url = "https://github.com/sayan-ch/netOP"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Network Cross-Validation and Model Selection via Subsampling",
+  author = c(person("Sayan", "Chakrabarty"),
+             person("Sharmodeep", "Sengupta"),
+             person("Yuguo", "Chen")),
+  year = "2026",
+  journal = "arXiv",
+  volume = "2504.06903",
+  doi = "10.48550/arXiv.2504.06903",
+  note = "NETCROP: NETwork CRoss-Validation using Overlapping Partitions"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Network cross-validation by edge sampling",
+  author = c(person("Tianxi", "Li"), person("Elizaveta", "Levina"),
+             person("Ji", "Zhu")),
+  year = "2020",
+  journal = "Biometrika",
+  volume = "107",
+  number = "2",
+  pages = "257--276",
+  doi = "10.1093/biomet/asaa006"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Network Cross-Validation for Determining the Number of Communities in Network Data",
+  author = c(person("Kehui", "Chen"), person("Jing", "Lei")),
+  year = "2018",
+  journal = "Journal of the American Statistical Association",
+  volume = "113",
+  number = "521",
+  pages = "241--251",
+  doi = "10.1080/01621459.2016.1246365"
+)

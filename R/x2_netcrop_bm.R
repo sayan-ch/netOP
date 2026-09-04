@@ -2,10 +2,11 @@
 #
 # This file preserves the original three-stage algorithm: obtain subnetwork
 # spectral labels, estimate block-model parameters, and evaluate every pair of
-# non-overlap pieces. Source 01_basic_helpers.R through 06_estimators.R and
-# x0_helpers.R and x1_sonnet.R before this file.
+# non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an SBM or DCBM and number of communities by overlapping-subnetwork CV.
+#' @rdname model_selection
+#' @export
 netcrop_blockmodel <- function(
     A,
     K_candidates,
@@ -44,12 +45,11 @@ netcrop_blockmodel <- function(
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files, x0_helpers.R, and x1_sonnet.R ",
-      "before x2_netcrop_bm.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "),
       ".",
       call. = FALSE
@@ -219,10 +219,10 @@ netcrop_blockmodel <- function(
   }
   losses <- unique(losses)
   selected_loss_functions <- lapply(losses, function(loss_name) {
-    if (!exists(loss_name, mode = "function", inherits = TRUE)) {
+    if (!exists(loss_name, mode = "function", inherits = TRUE, envir = environment())) {
       stop("Loss function not found: ", loss_name, ".", call. = FALSE)
     }
-    get(loss_name, mode = "function", inherits = TRUE)
+    get(loss_name, mode = "function", inherits = TRUE, envir = environment())
   })
   names(selected_loss_functions) <- losses
   # future/multisession cannot discover helpers reached dynamically through a
@@ -597,11 +597,11 @@ netcrop_blockmodel <- function(
       exists,
       logical(1),
       mode = "function",
-      inherits = TRUE
+      inherits = TRUE, envir = environment()
     )]
     if (length(missing_ram_helpers) > 0L) {
       stop(
-        "Source 01_basic_helpers.R before using ram_check = TRUE. Missing: ",
+        "Required RAM helpers are unavailable; reinstall netOP. Missing: ",
         paste(missing_ram_helpers, collapse = ", "), ".",
         call. = FALSE
       )
@@ -865,7 +865,7 @@ netcrop_blockmodel <- function(
         nodes <- splitter$subnetworks[[repetition]][[split_id]]
         A_subgraph <- A[nodes, nodes, drop = FALSE]
         representation <- build_spectral_representation(A_subgraph)
-        labels_by_model <- setNames(vector("list", length(model_candidates)),
+        labels_by_model <- stats::setNames(vector("list", length(model_candidates)),
                                     model_candidates)
         retain_row_norms <- "DCBM" %in% model_candidates &&
           dcbm_estimation_method == "spectral"
@@ -974,7 +974,7 @@ netcrop_blockmodel <- function(
             (raw_task_id - 1L) * length(K_candidates) + candidate_id
           )
           K <- K_candidates[candidate_id]
-          model_results <- setNames(
+          model_results <- stats::setNames(
             vector("list", length(model_candidates)), model_candidates
           )
           diagnostics <- vector("list", length(model_candidates))
@@ -1166,7 +1166,7 @@ netcrop_blockmodel <- function(
       length(K_candidates)
     )
     for (candidate_id in seq_along(K_candidates)) {
-      averaged_estimates[[repetition]][[candidate_id]] <- setNames(
+      averaged_estimates[[repetition]][[candidate_id]] <- stats::setNames(
         vector("list", length(model_candidates)),
         model_candidates
       )
@@ -1473,6 +1473,8 @@ netcrop_blockmodel <- function(
 }
 
 # Print the selected block model for every requested loss.
+#' @rdname model_selection
+#' @export
 print.netcrop_blockmodel <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   cat(algorithm, "results for block models\n")
@@ -1482,6 +1484,8 @@ print.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Summarize a NETCROP block-model fit.
+#' @rdname model_selection
+#' @export
 summary.netcrop_blockmodel <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
     "NETCROP"
@@ -1564,6 +1568,8 @@ summary.netcrop_blockmodel <- function(object, ...) {
 }
 
 # Print a NETCROP block-model summary.
+#' @rdname model_selection
+#' @export
 print.summary.netcrop_blockmodel <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   if (algorithm == "ECV") {
@@ -1658,6 +1664,8 @@ print.summary.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Plot CV loss curves, optionally aggregating across repetitions.
+#' @rdname model_selection
+#' @export
 plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
@@ -1668,10 +1676,10 @@ plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {
   )
   if (inherits(aggregate, "netcrop_blockmodel") || any(dot_is_result)) {
     if (!exists(
-      "plot_blockmodel_comparison", mode = "function", inherits = TRUE
+      "plot_blockmodel_comparison", mode = "function", inherits = TRUE, envir = environment()
     )) {
       stop(
-        "Source x6_other_algos.R before comparing block-model results.",
+        "Required comparison helpers are unavailable; reinstall netOP.",
         call. = FALSE
       )
     }

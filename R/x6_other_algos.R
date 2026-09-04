@@ -1,9 +1,12 @@
 # Other network model-selection algorithms
 #
 # The three low-level ECV routines below are preserved from the supplied
-# randnet-derived code. Their legacy dotted identifiers are external-boundary
-# exceptions to NAMING_CONVENTION.md. Only the names of the selectable loss
-# functions have been changed to the canonical project names.
+# randnet-derived code. The corresponding upstream functions are ECV.block(),
+# holdout.evaluation.fast.all(), iter.SVD.core.fast.all(),
+# ECV.undirected.Rank(), and missing.undirected.Rank.fast.all() in
+# randnet/R/RCode.R. Their legacy dotted identifiers are external-boundary
+# exceptions to NAMING_CONVENTION.md. Only selectable loss names and package
+# namespace integration were adapted during this conversion.
 
 holdout.evaluation.fast.all <- function(holdout.index, A, max.K, tau = 0,
                                         dc.est = 2, p.sample = 1,
@@ -317,7 +320,9 @@ ECV.BM <- function (A, max.K, cv = 3, holdout.p = 0.1, tau = 0, dc.est = 2,
 }
 
 # Run repeated ECV block-model selection with validated inputs and stable output.
-ecv_stability_bm <- function(
+#' @rdname ecv_stability
+#' @export
+ecv_stability_blockmodel <- function(
     A,
     max_K,
     train_proportion = 0.9,
@@ -349,11 +354,11 @@ ecv_stability_bm <- function(
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -444,7 +449,7 @@ ecv_stability_bm <- function(
     )
   }
   if ("auc_as_loss" %in% losses &&
-      !exists("auc_as_loss", mode = "function", inherits = TRUE)) {
+      !exists("auc_as_loss", mode = "function", inherits = TRUE, envir = environment())) {
     stop("auc_as_loss() must be available when that loss is requested.",
          call. = FALSE)
   }
@@ -558,12 +563,12 @@ ecv_stability_bm <- function(
   }
   
   auc_function_template <- if ("auc_as_loss" %in% losses) {
-    get("auc", mode = "function", inherits = TRUE)
+    get("auc", mode = "function", inherits = TRUE, envir = environment())
   } else {
     NULL
   }
   auc_loss_function_template <- if ("auc_as_loss" %in% losses) {
-    get("auc_as_loss", mode = "function", inherits = TRUE)
+    get("auc_as_loss", mode = "function", inherits = TRUE, envir = environment())
   } else {
     NULL
   }
@@ -901,11 +906,11 @@ ncv_bm <- function(
     "is_symmetric_matrix"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -1001,7 +1006,7 @@ ncv_bm <- function(
   if (!is.null(seed)) set.seed(seed)
   node_permutation <- sample(seq_len(n), size = n, replace = FALSE)
   fold_ends <- cumsum(fold_sizes)
-  fold_starts <- c(1L, head(fold_ends, -1L) + 1L)
+  fold_starts <- c(1L, utils::head(fold_ends, -1L) + 1L)
   fold_seeds <- if (is.null(seed)) {
     sample.int(.Machine$integer.max, size = cv, replace = TRUE)
   } else {
@@ -1205,7 +1210,9 @@ ncv_bm <- function(
 }
 
 # Stabilize NCV block-model selection across repeated node partitions.
-ncv_stability_bm <- function(
+#' @rdname ncv_stability
+#' @export
+ncv_stability_blockmodel <- function(
     A,
     max_K,
     cv = 3L,
@@ -1255,11 +1262,11 @@ ncv_stability_bm <- function(
     "is_symmetric_matrix", "format_bytes", "warn_if_insufficient_ram"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -1654,6 +1661,8 @@ ecv_rdpg_legacy_environment <- local({
 })
 
 # Stabilize ECV dimension selection for a symmetric RDPG.
+#' @rdname ecv_stability
+#' @export
 ecv_stability_rdpg <- function(
     A,
     max_d,
@@ -1695,11 +1704,11 @@ ecv_stability_rdpg <- function(
     "bin_dev", "auc_as_loss"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helpers before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -2204,6 +2213,8 @@ plot_rdpg_comparison <- function(..., loss_scale = c("relative", "raw")) {
 }
 
 # Select a spectral regularization parameter using the DK statistic.
+#' @rdname model_selection
+#' @export
 dkest_tune_regularizer <- function(
     A,
     K,
@@ -2246,11 +2257,11 @@ dkest_tune_regularizer <- function(
     "format_bytes"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helpers before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -2664,6 +2675,8 @@ dkest_tune_regularizer <- function(
 }
 
 # Fit spectral clustering over multiple regularization values and networks.
+#' @rdname model_selection
+#' @export
 mult_reg_spectral_cluster <- function(
     A,
     K,
@@ -2712,11 +2725,11 @@ mult_reg_spectral_cluster <- function(
     "offset_generator_seed", "warn_if_insufficient_ram", "format_bytes"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helpers before x6_other_algos.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -2993,6 +3006,8 @@ mult_reg_spectral_cluster <- function(
 }
 
 # Fit SONNET over multiple regularization values and networks.
+#' @rdname model_selection
+#' @export
 mult_reg_sonnet <- function(
     A,
     K,
@@ -3021,11 +3036,11 @@ mult_reg_sonnet <- function(
   failure_handling <- match.arg(failure_handling)
   required_helpers <- c("sonnet", "offset_generator_seed")
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source x1_sonnet.R and its helpers first. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".", call. = FALSE
     )
   }
@@ -3272,6 +3287,8 @@ mult_reg_sonnet <- function(
 }
 
 # Plot oracle clustering accuracy and optional regularizer selections.
+#' @rdname model_selection
+#' @export
 oracle_plotter <- function(
     A,
     g_true,
@@ -3313,7 +3330,7 @@ oracle_plotter <- function(
     "offset_generator_seed"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
@@ -4286,7 +4303,7 @@ plot_blockmodel_comparison <- function(
 # plot(nc.out)
 # 
 # system.time(
-#   ec.out <- ecv_stability_bm(
+#   ec.out <- ecv_stability_blockmodel(
 #     A = net,
 #     max_K = 10,
 #     nrep = 1L,

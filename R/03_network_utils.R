@@ -1,9 +1,6 @@
 # Network utility functions
 #
-# Optional C++ acceleration can be loaded with:
-#
-Rcpp::sourceCpp("03_network_utils.cpp", 
-                showOutput = FALSE, verbose = FALSE, echo = FALSE)
+# Compiled accelerators are registered when the package is installed.
 #
 # All R-facing functions have dependency-light pure-R fallbacks and do not use
 # igraph. A finite nonzero adjacency entry represents an edge. Connected
@@ -30,6 +27,8 @@ validate_adjacency <- function(A) {
 }
 
 # Build adjacency-list neighbors for the pure-R graph algorithms.
+#' @rdname network_utilities
+#' @export
 adjacency_neighbors <- function(
     A,
     directed = FALSE,
@@ -50,7 +49,7 @@ adjacency_neighbors <- function(
     A_c <- if (inherits(A, "dgCMatrix")) {
       A
     } else {
-      methods::as(A, "dgCMatrix")
+      methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
     }
     entries <- Matrix::summary(A_c)
     entries <- entries[entries$x != 0, , drop = FALSE]
@@ -89,6 +88,8 @@ adjacency_neighbors <- function(
 # Components are undirected/weak: an edge in either direction connects nodes.
 # Edge weights do not affect membership. Components are returned in discovery
 # order, and nodes within each component follow breadth-first search order.
+#' @rdname network_utilities
+#' @export
 connected_components <- function(
     A,
     self_loops = c("ignore", "include"),
@@ -118,10 +119,10 @@ connected_components <- function(
   } else {
     "connected_components_dense_cpp"
   }
-  if (use_cpp && exists(cpp_name, mode = "function", inherits = TRUE)) {
-    cpp_function <- get(cpp_name, mode = "function", inherits = TRUE)
+  if (use_cpp && exists(cpp_name, mode = "function", inherits = TRUE, envir = environment())) {
+    cpp_function <- get(cpp_name, mode = "function", inherits = TRUE, envir = environment())
     A_cpp <- if (is_sparse && !inherits(A, "dgCMatrix")) {
-      methods::as(A, "dgCMatrix")
+      methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
     } else if (is_sparse) {
       A
     } else {
@@ -191,6 +192,8 @@ connected_components <- function(
 #
 # When components tie in size, discovery order determines the winner, matching
 # which.max behavior from the pasted implementation.
+#' @rdname network_utilities
+#' @export
 largest_connected_component <- function(
     A,
     self_loops = c("ignore", "include"),
@@ -234,6 +237,8 @@ largest_connected_component <- function(
 }
 
 # Build weighted adjacency lists without densifying sparse matrices.
+#' @rdname network_utilities
+#' @export
 adjacency_weighted_neighbors <- function(
     A,
     directed = FALSE,
@@ -248,7 +253,7 @@ adjacency_weighted_neighbors <- function(
     A_c <- if (inherits(A, "dgCMatrix")) {
       A
     } else {
-      methods::as(A, "dgCMatrix")
+      methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
     }
     entries <- Matrix::summary(A_c)
     entries <- entries[entries$x != 0, , drop = FALSE]
@@ -313,6 +318,8 @@ adjacency_weighted_neighbors <- function(
 # direction is traversable in both directions. If reciprocal edge weights
 # differ, the smaller nonzero weight is used. Weighted paths require
 # nonnegative weights; zero denotes absence of an edge.
+#' @rdname network_utilities
+#' @export
 shortest_path_distances <- function(
     A,
     directed = FALSE,
@@ -354,10 +361,10 @@ shortest_path_distances <- function(
   } else {
     "shortest_path_distances_dense_cpp"
   }
-  if (use_cpp && exists(cpp_name, mode = "function", inherits = TRUE)) {
-    cpp_function <- get(cpp_name, mode = "function", inherits = TRUE)
+  if (use_cpp && exists(cpp_name, mode = "function", inherits = TRUE, envir = environment())) {
+    cpp_function <- get(cpp_name, mode = "function", inherits = TRUE, envir = environment())
     A_cpp <- if (is_sparse && !inherits(A, "dgCMatrix")) {
-      methods::as(A, "dgCMatrix")
+      methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
     } else if (is_sparse) {
       A
     } else {

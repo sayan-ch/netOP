@@ -67,7 +67,7 @@ validate_generator_ncores <- function(ncores) {
 # Internal apply helper. It uses 01_basic_helpers.R when available and otherwise
 # falls back to lapply, keeping this file usable on its own.
 generator_lapply <- function(X, FUN, ..., ncores) {
-  if (ncores > 1L && exists("uni_mclapply", mode = "function", inherits = TRUE)) {
+  if (ncores > 1L && exists("uni_mclapply", mode = "function", inherits = TRUE, envir = environment())) {
     return(uni_mclapply(
       X, FUN, ..., ncores = min(length(X), ncores), stop_on_error = TRUE
     ))
@@ -85,6 +85,8 @@ set_generator_parameters <- function(A, parameters) {
 }
 
 # Retrieve parameters attached by a generator in this file.
+#' @rdname network_generators
+#' @export
 get_generator_parameters <- function(A) {
   attr(A, "generator_parameters", exact = TRUE)
 }
@@ -104,6 +106,8 @@ validate_network_for_io <- function(A) {
 }
 
 # Check symmetry without requiring the Matrix package to be attached.
+#' @rdname network_generators
+#' @export
 is_symmetric_network_matrix <- function(A, tolerance = 1e-10) {
   if (inherits(A, "Matrix")) {
     return(isTRUE(Matrix::isSymmetric(A, tol = tolerance)))
@@ -126,6 +130,8 @@ resolve_network_format <- function(file, format) {
 # Metadata comment lines preserve n, direction, and weighting, including when
 # isolated nodes do not occur in the edge list. Undirected matrices store only
 # one requested triangle, including nonzero diagonal entries for self-loops.
+#' @rdname network_generators
+#' @export
 write_network <- function(
     A,
     file,
@@ -134,11 +140,17 @@ write_network <- function(
     triangle = c("upper", "lower"),
     format = c("auto", "csv", "tsv"),
     include_header = TRUE,
+    overwrite = FALSE,
     tolerance = 1e-10) {
   validate_network_for_io(A)
   triangle <- match.arg(triangle)
   format <- resolve_network_format(file, format)
   validate_generator_logical(include_header, "include_header")
+  validate_generator_logical(overwrite, "overwrite")
+  if (file.exists(file) && !overwrite) {
+    stop("file already exists; set overwrite = TRUE to replace it: ", file,
+         call. = FALSE)
+  }
 
   if (is.null(directed)) {
     directed <- !is_symmetric_network_matrix(A, tolerance = tolerance)
@@ -149,7 +161,7 @@ write_network <- function(
   }
 
   if (inherits(A, "Matrix")) {
-    entries <- Matrix::summary(methods::as(A, "dgCMatrix"))
+    entries <- Matrix::summary(methods::as(methods::as(A, "generalMatrix"), "dgCMatrix"))
     edge_data <- data.frame(
       node_from = entries$i,
       node_to = entries$j,
@@ -225,6 +237,8 @@ write_network <- function(
 # weights are then added once so they are not doubled. Matrix::sparseMatrix's
 # symmetric option is intentionally not used because symmetric Matrix classes
 # can interact poorly with RSpectra.
+#' @rdname network_generators
+#' @export
 read_network <- function(
     file,
     representation = c("sparse", "dense"),
@@ -384,7 +398,7 @@ read_network <- function(
       dims = c(n, n),
       giveCsparse = TRUE
     )
-    return(methods::as(A, "dgCMatrix"))
+    return(methods::as(methods::as(A, "generalMatrix"), "dgCMatrix"))
   }
   A <- Matrix::sparseMatrix(
     i = node_from[off_diagonal],
@@ -404,7 +418,7 @@ read_network <- function(
       giveCsparse = TRUE
     )
   }
-  methods::as(A, "dgCMatrix")
+  methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
 }
 
 # Validate an n-by-n probability matrix.
@@ -425,7 +439,7 @@ validate_probability_matrix <- function(P, directed, tolerance = 1e-10) {
   invisible(TRUE)
 }
 
-# Clip a generated probability matrix while remaining source-order independent.
+# Clip a generated probability matrix while remaining package-loading independent.
 clip_generator_probabilities <- function(P, lower_clip, upper_clip) {
   if (length(lower_clip) != 1L ||
       length(upper_clip) != 1L ||
@@ -448,6 +462,8 @@ clip_generator_probabilities <- function(P, lower_clip, upper_clip) {
 
 # Calibrate a global probability multiplier to a requested expected row degree.
 # Bisection accounts for probability clipping, unlike a one-step ratio.
+#' @rdname network_generators
+#' @export
 scale_to_average_degree <- function(
     P,
     average_degree,
@@ -536,6 +552,8 @@ scale_to_average_degree <- function(
 # Apply the one-step average-degree scaling used by the original generators.
 # The multiplier is computed before clipping and before removing the diagonal.
 # Consequently, the final expected degree can differ from average_degree.
+#' @rdname network_generators
+#' @export
 scale_to_average_degree_naive <- function(
     P,
     average_degree,
@@ -581,6 +599,8 @@ scale_to_average_degree_naive <- function(
 }
 
 # Select calibrated bisection or the original one-step degree scaling.
+#' @rdname network_generators
+#' @export
 apply_average_degree_scaling <- function(
     P,
     average_degree,
@@ -611,6 +631,8 @@ apply_average_degree_scaling <- function(
 # For undirected networks only the upper triangle is sampled and then mirrored,
 # so reciprocal edges are identical. Explicit row-specific seeds make results
 # independent of ncores and avoid duplicated RNG streams after process forks.
+#' @rdname network_generators
+#' @export
 generate_adjacency <- function(
     P,
     representation = c("sparse", "dense"),
@@ -766,10 +788,12 @@ generate_adjacency <- function(
       giveCsparse = TRUE
     )
   }
-  methods::as(A, "dgCMatrix")
+  methods::as(methods::as(A, "generalMatrix"), "dgCMatrix")
 }
 
 # Generate an Erdos-Renyi adjacency matrix.
+#' @rdname network_generators
+#' @export
 generate_er <- function(
     n,
     p = NULL,
@@ -827,6 +851,8 @@ generate_er <- function(
 }
 
 # Generate or validate an n-by-d latent-position matrix.
+#' @rdname network_generators
+#' @export
 generate_latent_positions <- function(
     n = NULL,
     d = NULL,
@@ -890,6 +916,8 @@ generate_latent_positions <- function(
 # Undirected models use Z. Directed models use Z_left and Z_right. Any missing
 # latent matrix is generated; dimensions are inferred from supplied matrices
 # whenever possible.
+#' @rdname network_generators
+#' @export
 generate_rdpg <- function(
     n = NULL,
     d = NULL,
@@ -1038,6 +1066,8 @@ generate_rdpg <- function(
 }
 
 # Generate community labels, or validate labels supplied by the caller.
+#' @rdname network_generators
+#' @export
 generate_community_labels <- function(
     n = NULL,
     K = NULL,
@@ -1094,6 +1124,8 @@ generate_community_labels <- function(
 }
 
 # Generate the historical default DCBM degree parameters.
+#' @rdname network_generators
+#' @export
 generate_inverse_beta_degree_parameters <- function(
     n,
     shape_1 = 4,
@@ -1110,6 +1142,8 @@ generate_inverse_beta_degree_parameters <- function(
 }
 
 # Generate or validate nonnegative DCBM degree parameters.
+#' @rdname network_generators
+#' @export
 generate_degree_parameters <- function(
     n = NULL,
     psi = NULL,
@@ -1189,6 +1223,8 @@ generate_degree_parameters <- function(
 # g_true and psi may be supplied directly. Missing values are generated.
 # P_block may be supplied directly; otherwise alpha is the within-community
 # probability and alpha * beta is the between-community probability.
+#' @rdname network_generators
+#' @export
 generate_dcbm <- function(
     n = NULL,
     K = NULL,
@@ -1337,6 +1373,8 @@ generate_dcbm <- function(
 }
 
 # Generate an ordinary SBM by fixing every degree parameter to one.
+#' @rdname network_generators
+#' @export
 generate_sbm <- function(
     n = NULL,
     K = NULL,
@@ -1391,6 +1429,8 @@ generate_sbm <- function(
 
 # Draw standard-normal noise truncated to a finite interval using inverse-CDF
 # sampling. This avoids a dependency on truncnorm.
+#' @rdname network_generators
+#' @export
 generate_truncated_normal <- function(
     n,
     lower_bound = -2,
@@ -1414,6 +1454,8 @@ generate_truncated_normal <- function(
 }
 
 # Center and normalize latent positions as in the pasted LSM generator.
+#' @rdname network_generators
+#' @export
 normalize_lsm_positions <- function(Z) {
   Z <- sweep(Z, 2L, colMeans(Z), FUN = "-")
   G_small <- crossprod(Z)
@@ -1426,6 +1468,8 @@ normalize_lsm_positions <- function(Z) {
 }
 
 # Generate latent positions from a finite Gaussian mixture.
+#' @rdname network_generators
+#' @export
 generate_lsm_positions <- function(
     n,
     d,
@@ -1469,6 +1513,8 @@ generate_lsm_positions <- function(
 }
 
 # Validate or generate the node intercept used by the latent-space model.
+#' @rdname network_generators
+#' @export
 generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
   n <- validate_generator_count(n, "n")
   seed <- validate_generator_seed(seed)
@@ -1493,6 +1539,8 @@ generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
 # -log(current_degree / target_degree), including diagonal probabilities during
 # its updates and removing them only at the end. The calibrated method uses
 # bisection against the final clipped probability matrix after loop handling.
+#' @rdname network_generators
+#' @export
 scale_lsm_to_average_degree <- function(
     theta,
     average_degree,
@@ -1609,6 +1657,8 @@ scale_lsm_to_average_degree <- function(
 # latent cross-product is doubled. In the undirected scalar-alpha case this is
 # exactly alpha - ||Z_i - Z_j||^2; vector alpha gives its node-intercept
 # generalization.
+#' @rdname network_generators
+#' @export
 generate_lsm <- function(
     n = NULL,
     d = NULL,

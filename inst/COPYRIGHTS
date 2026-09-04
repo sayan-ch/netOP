@@ -1,0 +1,70 @@
+netOP licensing and provenance inventory
+========================================
+
+Package-owned code
+------------------
+Files: R/01_basic_helpers.R, R/02_math_helpers.R, R/03_network_utils.R,
+R/04_network_generator.R, R/05_embedders.R, R/06_estimators.R,
+R/x0_helpers.R through R/x5_netcrop_regularizer.R, src/*.cpp other than
+generated src/RcppExports.cpp, documentation, tests, vignettes, workflows,
+and benchmark scripts.
+Copyright: 2026 Sayan Chakrabarty.
+License: GPL (>= 2).
+Origin: netOP's authoritative library_functions tree at baseline commit
+1843454; relocated and adapted for an installed package namespace.
+Modifications: package layout, native registration, public API annotations,
+documentation, deterministic examples, tests, and package-level naming.
+
+randnet-derived ECV implementation
+----------------------------------
+Files: R/x6_other_algos.R.
+Local functions: holdout.evaluation.fast.all(), iter.SVD.core.fast.all(),
+ECV.BM(), and the three legacy RDPG ECV functions enclosed in the private
+environment constructed by ecv_stability_rdpg(). Corresponding upstream
+functions: ECV.block(), holdout.evaluation.fast.all(),
+iter.SVD.core.fast.all(), ECV.undirected.Rank(), and
+missing.undirected.Rank.fast.all() in randnet/R/RCode.R.
+Origin: CRAN randnet version 1.0 source tarball.
+Authors listed by randnet: Tianxi Li, Elizaveta Levina, Ji Zhu, and Can M. Le.
+License: GPL (>= 2).
+Incorporation: copied and adapted before the package conversion represented by
+baseline commit 1843454. The conversion preserves the authoritative ECV
+implementation while adding namespace-safe dependency injection, validation,
+outer repetition management, canonical loss labels, and public wrappers.
+Required notice: this inventory and LICENSE.note retain the upstream origin,
+authors, version, and license. randnet is not a netOP dependency.
+
+Generated native interfaces
+---------------------------
+Files: R/RcppExports.R and src/RcppExports.cpp.
+Generator: Rcpp 1.1.1-1.1, Rcpp::compileAttributes().
+License: generated interfaces are distributed under netOP's GPL (>= 2).
+
+Runtime and build dependencies
+------------------------------
+Rcpp 1.1.1-1.1 (GPL >= 2); RcppEigen 0.3.4.0.2 (GPL >= 2 plus its LICENSE);
+Matrix 1.7-5 (GPL >= 2); RSpectra 0.16-2 (MPL >= 2); irlba 2.3.7 (GPL-3);
+cluster 2.1.8.2 (GPL >= 2); tibble 3.3.1 (MIT). These dependencies are used
+under their own licenses and are not copied into netOP.
+
+Suggested development/runtime packages
+--------------------------------------
+entropy 1.3.2 (GPL >= 3); future 1.70.0 (LGPL >= 2.1); future.apply 1.20.2
+(GPL >= 2); ggplot2 4.0.3 (MIT); knitr 1.51 (GPL); peakRAM 1.0.2 (GPL-2);
+pkgdown 2.2.0 (MIT); ps 1.9.3 (MIT); rmarkdown 2.31 (GPL-3); testthat 3.3.2
+(MIT). No source from these packages is bundled.
+
+Bundled non-code assets
+-----------------------
+No third-party datasets, images, fonts, archives, or binaries are bundled.
+CODE_OF_CONDUCT.md is original concise package prose informed by Contributor
+Covenant version 2.1, copyright Contributor Covenant, licensed CC BY 4.0, and
+links to https://www.contributor-covenant.org/version/2/1/code_of_conduct/.
+
+Compatibility conclusion
+------------------------
+The incorporated randnet code and generated/package-owned code are compatible
+with distribution of netOP under GPL (>= 2). Ordinary linked/imported and
+suggested dependencies remain separately distributed under GPL-compatible or
+weak-copyleft/permissive licenses. This is a provenance record, not legal
+advice.

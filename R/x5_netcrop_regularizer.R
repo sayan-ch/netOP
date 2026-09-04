@@ -1,9 +1,11 @@
 # NETCROP regularization-parameter selection for SBM and DCBM
 #
-# Source 01_basic_helpers.R through 06_estimators.R and x0_helpers.R first.
+# Package loading resolves all internal estimator and splitting helpers.
 # This implementation uses observed-network cross-validation only.
 
 # Compare two pairs of community-label vectors using negative NMI.
+#' @rdname model_selection
+#' @export
 pair_nmi_loss <- function(g_1, g_2, g_3, g_4) {
   vectors <- list(g_1 = g_1, g_2 = g_2, g_3 = g_3, g_4 = g_4)
   invalid <- vapply(vectors, function(g) {
@@ -27,6 +29,8 @@ pair_nmi_loss <- function(g_1, g_2, g_3, g_4) {
 }
 
 # Compare two pairs of community-label vectors using matched Hamming loss.
+#' @rdname model_selection
+#' @export
 pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
   vectors <- list(g_1 = g_1, g_2 = g_2, g_3 = g_3, g_4 = g_4)
   invalid <- vapply(vectors, function(g) {
@@ -51,6 +55,8 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 }
 
 # Select a spectral regularization parameter by overlapping-subnetwork CV.
+#' @rdname model_selection
+#' @export
 netcrop_tune_regularizer <- function(
     A,
     K,
@@ -120,11 +126,11 @@ netcrop_tune_regularizer <- function(
     "sse", "bin_dev", "auc_as_loss", "nmi"
   )
   missing_helpers <- required_helpers[!vapply(
-    required_helpers, exists, logical(1), mode = "function", inherits = TRUE
+    required_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helpers and x0_helpers.R first. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -291,10 +297,10 @@ netcrop_tune_regularizer <- function(
     loss_types <- loss_types[losses]
   }
   loss_functions <- lapply(losses, function(loss_name) {
-    if (!exists(loss_name, mode = "function", inherits = TRUE)) {
+    if (!exists(loss_name, mode = "function", inherits = TRUE, envir = environment())) {
       stop("Loss function not found: ", loss_name, ".", call. = FALSE)
     }
-    get(loss_name, mode = "function", inherits = TRUE)
+    get(loss_name, mode = "function", inherits = TRUE, envir = environment())
   })
   names(loss_functions) <- losses
   has_probability_loss <- any(loss_types == "probability")
@@ -459,7 +465,7 @@ netcrop_tune_regularizer <- function(
     ram_helpers <- c("estimate_spectral_decomp_ram",
                      "estimate_matrix_product_ram", "report_ram_formula")
     missing_ram <- ram_helpers[!vapply(
-      ram_helpers, exists, logical(1), mode = "function", inherits = TRUE
+      ram_helpers, exists, logical(1), mode = "function", inherits = TRUE, envir = environment()
     )]
     if (length(missing_ram) > 0L) {
       stop("Missing RAM helper(s): ", paste(missing_ram, collapse = ", "),
@@ -999,6 +1005,8 @@ netcrop_tune_regularizer <- function(
 }
 
 # Print selected regularization parameters.
+#' @rdname model_selection
+#' @export
 print.netcrop_regularizer <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   cat(algorithm, "spectral-regularizer selection\n")
@@ -1009,6 +1017,8 @@ print.netcrop_regularizer <- function(x, ...) {
 }
 
 # Summarize a NETCROP regularizer fit.
+#' @rdname model_selection
+#' @export
 summary.netcrop_regularizer <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
     "NETCROP"
@@ -1061,6 +1071,8 @@ summary.netcrop_regularizer <- function(object, ...) {
 }
 
 # Print a NETCROP regularizer summary.
+#' @rdname model_selection
+#' @export
 print.summary.netcrop_regularizer <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   if (algorithm == "DKEST") {
@@ -1104,6 +1116,8 @@ print.summary.netcrop_regularizer <- function(x, ...) {
 }
 
 # Plot regularization-parameter CV loss curves.
+#' @rdname model_selection
+#' @export
 plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   if (algorithm == "DKEST") {

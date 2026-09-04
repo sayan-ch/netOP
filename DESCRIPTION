@@ -1,11 +1,45 @@
 Package: netOP
-Title: Fast network data operations.
+Title: Network Analysis and Model Selection Tools
 Version: 0.0.0.9000
 Authors@R: 
-    person("Sayan", "Chakrabarty", , "sayanc@umich.edu", role = c("aut", "cre"))
-Description: Fast network data operations.
-License: MIT
+    person("Sayan", "Chakrabarty", , "sayanc@umich.edu",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-2372-2076"))
+Description: Tools for generating, estimating, embedding, clustering, and
+    selecting statistical network models. The package includes spectral and
+    latent-space utilities together with SONNET, NETCROP, edge
+    cross-validation (ECV), and node cross-validation (NCV) workflows for
+    scalable network analysis and model selection.
+License: GPL (>= 2)
+URL: https://github.com/sayan-ch/netOP, https://sayan-ch.github.io
+BugReports: https://github.com/sayan-ch/netOP/issues
 Encoding: UTF-8
+Depends:
+    R (>= 4.1.0)
+Imports:
+    cluster,
+    irlba,
+    Matrix,
+    methods,
+    Rcpp,
+    RSpectra,
+    tibble
+LinkingTo:
+    Rcpp,
+    RcppEigen
+Suggests:
+    entropy,
+    future,
+    future.apply,
+    ggplot2,
+    knitr,
+    peakRAM,
+    pkgdown,
+    ps,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
-Imports: dplyr, RSpectra, cluster, Rfast, data.table, readr, irlba, softImpute, Matrix, pROC, IMIFA, rlist, latentnet
+RoxygenNote: 8.0.0
+Config/testthat/edition: 3
+Copyright: 2026 Sayan Chakrabarty

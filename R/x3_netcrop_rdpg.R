@@ -3,9 +3,10 @@
 # This file preserves the original four-stage computational flow: decompose
 # overlapping subnetworks, construct every candidate embedding, align each
 # non-reference embedding through the overlap, and evaluate every unordered
-# pair of non-overlap pieces. Source the numbered helpers, x0_helpers.R, and
-# x1_sonnet.R before this file.
+# pair of non-overlap pieces. Package loading resolves all internal helpers.
 
+#' @rdname model_selection
+#' @export
 netcrop_rdpg <- function(
     A,
     d_candidates,
@@ -38,12 +39,11 @@ netcrop_rdpg <- function(
     exists,
     logical(1),
     mode = "function",
-    inherits = TRUE
+    inherits = TRUE, envir = environment()
   )]
   if (length(missing_helpers) > 0L) {
     stop(
-      "Source the numbered helper files, x0_helpers.R, and x1_sonnet.R ",
-      "before x3_netcrop_rdpg.R. Missing: ",
+      "Required internal netOP helpers are unavailable; reinstall netOP. Missing: ",
       paste(missing_helpers, collapse = ", "), ".",
       call. = FALSE
     )
@@ -224,10 +224,10 @@ netcrop_rdpg <- function(
   )
 
   selected_loss_functions <- lapply(losses, function(loss_name) {
-    if (!exists(loss_name, mode = "function", inherits = TRUE)) {
+    if (!exists(loss_name, mode = "function", inherits = TRUE, envir = environment())) {
       stop("Loss function not found: ", loss_name, ".", call. = FALSE)
     }
-    get(loss_name, mode = "function", inherits = TRUE)
+    get(loss_name, mode = "function", inherits = TRUE, envir = environment())
   })
   names(selected_loss_functions) <- losses
   bundled_loss_names <- intersect(
@@ -746,6 +746,8 @@ netcrop_rdpg <- function(
 }
 
 # Print the selected RDPG dimension for every requested loss.
+#' @rdname model_selection
+#' @export
 print.netcrop_rdpg <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   cat(algorithm, "results for symmetric RDPG\n")
@@ -755,6 +757,8 @@ print.netcrop_rdpg <- function(x, ...) {
 }
 
 # Summarize a symmetric-RDPG NETCROP fit.
+#' @rdname model_selection
+#' @export
 summary.netcrop_rdpg <- function(object, ...) {
   algorithm <- if (is.null(object$algorithm)) {
     "NETCROP"
@@ -806,6 +810,8 @@ summary.netcrop_rdpg <- function(object, ...) {
 }
 
 # Print a symmetric-RDPG NETCROP summary.
+#' @rdname model_selection
+#' @export
 print.summary.netcrop_rdpg <- function(x, ...) {
   algorithm <- if (is.null(x$algorithm)) "NETCROP" else toupper(x$algorithm)
   if (algorithm == "ECV") {
@@ -867,6 +873,8 @@ print.summary.netcrop_rdpg <- function(x, ...) {
 }
 
 # Plot RDPG CV loss curves, optionally aggregating across repetitions.
+#' @rdname model_selection
+#' @export
 plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The ggplot2 package is required for plotting.", call. = FALSE)
@@ -874,9 +882,9 @@ plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {
   dots <- list(...)
   dot_is_result <- vapply(dots, inherits, logical(1), what = "netcrop_rdpg")
   if (inherits(aggregate, "netcrop_rdpg") || any(dot_is_result)) {
-    if (!exists("plot_rdpg_comparison", mode = "function", inherits = TRUE)) {
+    if (!exists("plot_rdpg_comparison", mode = "function", inherits = TRUE, envir = environment())) {
       stop(
-        "Source x6_other_algos.R before comparing RDPG results.",
+        "Required comparison helpers are unavailable; reinstall netOP.",
         call. = FALSE
       )
     }

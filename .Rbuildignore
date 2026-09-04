@@ -3,7 +3,7 @@
 ^\.git$
 ^\.github$
 ^\.gitignore$
-^NAMING_CONVENTION\.md$
+^CONVENTIONS\.md$
 ^dictionary\.md$
 ^workplan\.md$
 ^CHECKPOINT\.md$

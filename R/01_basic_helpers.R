@@ -1,6 +1,6 @@
 # Basic cross-platform helpers
 #
-# This file follows NAMING_CONVENTION.md. The original proposed name
+# This file follows CONVENTIONS.md. The original proposed name
 # `uni.mclapply` is therefore exposed as `uni_mclapply`, and `mc.cores` is
 # exposed as `ncores`. The dotted `mc.cores`, `.Platform$OS.type`, and
 # `future.seed` names below are external R/package interfaces and cannot be

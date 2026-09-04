@@ -12,3 +12,7 @@ docs/
 .RData
 .Renviron
 .vscode/
+SC_tests.R
+AUDIT.md
+library_functions/
+workplan.md

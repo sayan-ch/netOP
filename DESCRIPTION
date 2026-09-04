@@ -1,5 +1,5 @@
 Package: netOP
-Title: Network Analysis and Model Selection Tools
+Title: Network Operations (netOP): Efficient Tools and Overlapping Partitions based Methods for Large Networks
 Version: 0.0.0.9000
 Authors@R: 
     person("Sayan", "Chakrabarty", , "sayanc@umich.edu",

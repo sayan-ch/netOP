@@ -32,7 +32,7 @@ netOP/
 ├── inst/COPYRIGHTS           File-level licensing/provenance inventory
 ├── inst/LICENSE.note         Installed copy of the upstream-code notice
 ├── README.md, NEWS.md        User-facing package and release documentation
-├── NAMING_CONVENTION.md      Mandatory naming and implementation rules
+├── CONVENTIONS.md            Mandatory naming and implementation rules
 └── dictionary.md             This living function reference
 ```
 

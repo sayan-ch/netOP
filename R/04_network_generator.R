@@ -59,7 +59,7 @@ offset_generator_seed <- function(seed, offset) {
   as.integer((as.double(seed) + as.double(offset)) %% .Machine$integer.max)
 }
 
-# Validate ncores according to NAMING_CONVENTION.md.
+# Validate ncores according to CONVENTIONS.md.
 validate_generator_ncores <- function(ncores) {
   validate_generator_count(ncores, "ncores")
 }

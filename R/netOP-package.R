@@ -1,4 +1,4 @@
-#' netOP: Network Analysis and Model Selection Tools
+#' Network Operations (netOP): Efficient Tools and Overlapping Partitions based Methods for Large Networks
 #'
 #' netOP provides network generators, losses, graph utilities, spectral and
 #' latent-space embeddings, SBM/DCBM estimators, SONNET scalable clustering,

@@ -56,6 +56,7 @@ selection <- netcrop_blockmodel(
   dcbm_est_options = list(spectral_cluster = list(spectral_engine = "base"))
 )
 summary(selection)
+plot(selection)
 ```
 
 Generators use sparse output by default where supported. `netOP` re-exports
@@ -69,20 +70,6 @@ For reproducible computations, supply `seed` explicitly. Documentation
 examples use `ncores = 1` for portability and repeatability; supported routines
 may use more workers in production while retaining their documented seeding
 behavior.
-
-Public model-selection entry points consistently begin with the primary
-network and model-size candidate set:
-
-- `netcrop_blockmodel(A, K_candidates, ...)`
-- `netcrop_rdpg(A, d_candidates, ...)`
-- `netcrop_lsm(A, d_candidates, ...)`
-- `netcrop_tune_regularizer(A, K, tau_candidates, ...)`
-- `ecv_stability_blockmodel(A, max_K, ...)`
-- `ecv_stability_rdpg(A, max_d, ...)`
-- `ncv_stability_blockmodel(A, max_K, ...)`
-
-The ECV maximum interfaces intentionally evaluate every candidate from one to
-the maximum because that is part of the incorporated algorithm.
 
 ## Algorithm families
 
@@ -101,6 +88,8 @@ workflow](https://github.com/sayan-ch/netOP/blob/main/vignettes/getting-started.
 
 ## Glossary
 
+- **NETCROP**: NETwork CRoss-Validation using Overlapping Partitions.
+- **SONNET**: Subsampling ON NETwork
 - **SBM**: stochastic block model.
 - **DCBM**: degree-corrected stochastic block model.
 - **RDPG**: random dot product graph.
@@ -108,9 +97,9 @@ workflow](https://github.com/sayan-ch/netOP/blob/main/vignettes/getting-started.
 - **ASE**: adjacency spectral embedding.
 - **ECV**: edge cross-validation.
 - **NCV**: node cross-validation.
-- **NETCROP**: NETwork CRoss-Validation using Overlapping Partitions.
 
-## Citations and implementation disclosures
+
+## Citations
 
 For NETCROP, cite:
 
@@ -120,28 +109,24 @@ For NETCROP, cite:
 
 NETCROP means “NETwork CRoss-Validation using Overlapping Partitions.”
 
-For ECV, cite:
+For SONNET, cite:
 
-> Li, T., Levina, E., and Zhu, J. (2020). Network cross-validation by edge
-> sampling. *Biometrika*, 107(2), 257–276.
-> <https://doi.org/10.1093/biomet/asaa006>
+> Chakrabarty, S., Sengupta, S., and Chen, Y. (2025). Subsampling
+> Based Community Detection for Large Networks. Statistica Sinica (35)
+> 1627 -- 1648. <https://doi.org/10.5705/ss.202022.0108>
 
-netOP provides self-contained wrappers around an ECV implementation derived
-from CRAN `randnet` 1.0. Installing or using netOP does not require `randnet`.
-The ECV-specific implementation helpers are internal and are not part of the
-netOP public API.
-
-For NCV, cite:
-
-> Chen, K. and Lei, J. (2018). Network Cross-Validation for Determining the
-> Number of Communities in Network Data. *Journal of the American Statistical
-> Association*, 113(521), 241–251.
-> <https://doi.org/10.1080/01621459.2016.1246365>
-
-The NCV wrapper is the netOP author's implementation of the exact algorithm in
-Chen and Lei (2018). Numerical-stability measures and failsafes were added
-without altering that algorithm. Run `citation("netOP")` for machine-readable
+Run `citation("netOP")` for machine-readable
 citations and see `inst/COPYRIGHTS` for file-level provenance.
+
+## Implementation Disclosures
+
+* `netOP` provides self-contained wrappers around an ECV (<https://doi.org/10.1093/biomet/asaa00>)
+implementation derived from CRAN `randnet` 1.0. Installing or using netOP does not require `randnet`.
+The ECV-specific implementation helpers are internal and are not part of the netOP public API.
+
+* The NCV wrapper is the `netOP` author's implementation of the exact algorithm in
+<https://doi.org/10.1080/01621459.2016.1246365>. Numerical-stability measures and failsafes were added
+without altering that algorithm.
 
 ## Support and development
 

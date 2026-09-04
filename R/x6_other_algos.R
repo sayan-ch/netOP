@@ -5,7 +5,7 @@
 # holdout.evaluation.fast.all(), iter.SVD.core.fast.all(),
 # ECV.undirected.Rank(), and missing.undirected.Rank.fast.all() in
 # randnet/R/RCode.R. Their legacy dotted identifiers are external-boundary
-# exceptions to NAMING_CONVENTION.md. Only selectable loss names and package
+# exceptions to CONVENTIONS.md. Only selectable loss names and package
 # namespace integration were adapted during this conversion.
 
 holdout.evaluation.fast.all <- function(holdout.index, A, max.K, tau = 0,

@@ -1,6 +1,6 @@
 # Basic mathematical helpers
 #
-# This file follows NAMING_CONVENTION.md. Names from the pasted code have been
+# This file follows CONVENTIONS.md. Names from the pasted code have been
 # converted from period separators or unexplained capitalization to snake_case.
 # Compiled accelerators are registered when the package is installed.
 

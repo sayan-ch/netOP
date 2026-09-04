@@ -4,7 +4,7 @@
 \name{netOP-package}
 \alias{netOP}
 \alias{netOP-package}
-\title{netOP: Network Analysis and Model Selection Tools}
+\title{Network Operations (netOP): Efficient Tools and Overlapping Partitions based Methods for Large Networks}
 \description{
 netOP provides network generators, losses, graph utilities, spectral and
 latent-space embeddings, SBM/DCBM estimators, SONNET scalable clustering,

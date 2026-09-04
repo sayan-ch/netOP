@@ -6,7 +6,7 @@ maintainer approves the change.
 
 Contributions must:
 
-1. follow `NAMING_CONVENTION.md`, using underscore-separated identifiers except
+1. follow `CONVENTIONS.md`, using underscore-separated identifiers except
    where R S3 dispatch or a preserved upstream boundary requires otherwise;
 2. update `dictionary.md` for every function, signature, visibility,
    dependency, fallback, return-value, or source-tree change;
@@ -18,4 +18,4 @@ Contributions must:
    `R CMD build`, and `R CMD check --as-cran`.
 
 Do not introduce `sourceCpp()`, runtime package installation, machine-specific
-paths, credentials, or a dependency on `randnet`.
+paths, credentials, or a dependency on large packages.

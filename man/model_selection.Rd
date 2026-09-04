@@ -97,4 +97,8 @@ fit
 Chakrabarty, S., Sengupta, S., and Chen, Y. (2026). Network
 Cross-Validation and Model Selection via Subsampling. arXiv:2504.06903.
 \doi{10.48550/arXiv.2504.06903}
+
+Chakrabarty, S., Sengupta, S., and Chen, Y. (2025). Subsampling Based
+Community Detection for Large Networks. \emph{Statistica Sinica}, 35,
+1627--1648. \doi{10.5705/ss.202022.0108}
 }

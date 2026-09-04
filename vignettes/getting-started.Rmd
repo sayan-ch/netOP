@@ -1,0 +1,89 @@
+---
+title: "Getting Started with netOP"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with netOP}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup}
+library(netOP)
+set.seed(2026)
+```
+
+## Generate and inspect a network
+
+Generators return adjacency matrices directly and attach only compact truth
+metadata. This keeps sparse output useful without attaching a dense probability
+matrix.
+
+```{r generate}
+A <- generate_sbm(
+  n = 30,
+  K = 2,
+  alpha = 0.5,
+  beta = 0.08,
+  representation = "dense",
+  seed = 1,
+  ncores = 1
+)
+parameters <- get_generator_parameters(A)
+table(parameters$g_true)
+```
+
+## Embed and cluster
+
+```{r fit}
+embedding <- ase(A, d = 2)
+dim(embedding$Z_hat)
+
+clustering <- spectral_cluster(
+  A,
+  K = 2,
+  spectral_engine = "base",
+  cluster_engine = "kmeans"
+)
+table(clustering$g_hat)
+```
+
+## Select a model
+
+The public model-selection APIs begin with the network and candidate set.
+Examples use one worker and small deterministic inputs; production analyses can
+increase repetition counts and choose partial eigensolvers.
+
+```{r select}
+selection <- netcrop_blockmodel(
+  A,
+  K_candidates = 1:2,
+  num_subnetworks = 2,
+  overlap_size = 10,
+  nrep = 1,
+  losses = "sse",
+  ncores = 1,
+  seed = 2,
+  verbose = FALSE,
+  sbm_est_options = list(spectral_cluster = list(spectral_engine = "base")),
+  dcbm_est_options = list(spectral_cluster = list(spectral_engine = "base"))
+)
+selection$best_model_overall
+```
+
+NETCROP is also available for RDPG and latent-space dimensions and spectral
+regularization. The self-contained ECV and NCV wrappers provide alternative
+block-model stability selectors; see `?ecv_stability_blockmodel` and
+`?ncv_stability_blockmodel` for disclosures, algorithm restrictions, and
+citations.
+
+## Results and plotting
+
+All high-level model-selection results provide `print()` and `summary()`
+methods. Plotting is available when `ggplot2` is installed.
+
+```{r inspect}
+summary(selection)
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  plot(selection)
+}
+```

@@ -1,0 +1,25 @@
+url: https://github.com/sayan-ch/netOP
+template:
+  bootstrap: 5
+reference:
+- title: Generate and read networks
+  contents:
+  - network_generators
+- title: Mathematical and graph utilities
+  contents:
+  - math_utilities
+  - network_utilities
+  - resource_utilities
+- title: Embedding and estimation
+  contents:
+  - embedding_estimating
+- title: Model selection
+  contents:
+  - model_selection
+  - ecv_stability
+  - ncv_stability
+articles:
+- title: Workflows
+  navbar: ~
+  contents:
+  - getting-started

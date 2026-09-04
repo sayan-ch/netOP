@@ -22,6 +22,9 @@ sonnet(
   ram_check = FALSE,
   share_overlap = FALSE,
   parameter_select_options = list(),
+  laplacian = FALSE,
+  regularize_tau = 0,
+  regularize_subnetworks = TRUE,
   ...
 )
 
@@ -49,6 +52,14 @@ sonnet(
 \item{share_overlap}{Select the historical shared-overlap SONNET variant.}
 
 \item{parameter_select_options}{Named automatic-partition options.}
+
+\item{laplacian}{Convert adjacency matrices to graph Laplacians.}
+
+\item{regularize_tau}{Nonnegative regularization strength.}
+
+\item{regularize_subnetworks}{Apply Laplacian conversion and regularization
+separately within each SONNET subnetwork. If \code{FALSE}, transform the full
+network once before extracting subnetworks.}
 
 \item{...}{Named arguments forwarded deliberately, or S3 method arguments.}
 

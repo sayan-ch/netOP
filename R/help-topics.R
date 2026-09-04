@@ -373,6 +373,8 @@ NULL
 #' Fits scalable overlapping-partition clustering to a dense or sparse network.
 #' @inheritParams model_selection
 #' @param K Positive number of communities.
+#' @param laplacian Convert adjacency matrices to graph Laplacians.
+#' @param regularize_tau Nonnegative regularization strength.
 #' @return A fitted `sonnet` object with print and summary methods.
 #' @seealso [sonnet_shared_overlap()], [sonnet_independent_overlap()],
 #'   [spectral_cluster()]
@@ -387,6 +389,9 @@ NULL
 #' @param K_candidates Candidate community counts, conventionally `1:5`.
 #' @param num_subnetworks Positive number of subnetworks.
 #' @param overlap_size Nonnegative overlap size.
+#' @param laplacian Convert subnetwork adjacency matrices to graph Laplacians.
+#' @param regularize_tau Shared nonnegative regularization strength for both
+#'   SBM and DCBM candidates.
 #' @param sbm_est_options,dcbm_est_options Named estimator options.
 #' @return A `netcrop_blockmodel` result with print, summary, and plot methods.
 #' @seealso [ecv_stability_blockmodel()], [ncv_stability_blockmodel()]
@@ -487,6 +492,9 @@ NULL
 #' @inheritParams model_selection
 #' @param K Positive number of communities.
 #' @param tau_candidates Candidate regularization values.
+#' @param laplacian Convert adjacency matrices to graph Laplacians.
+#' @param normalize_laplacian Use symmetric normalized Laplacians.
+#' @param handle_zero_degree_nodes Zero-degree node policy.
 #' @param spectral_options,cluster_options Named spectral and clustering options.
 #' @return A multi-regularization clustering result.
 #' @seealso [dkest_tune_regularizer()], [netcrop_tune_regularizer()]

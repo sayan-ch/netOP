@@ -38,7 +38,6 @@ reference:
   - modal
   - nmi
   - matrix_density
-  - is_symmetric_matrix
   - graph_laplacian
   - outer_add
   - procrustes
@@ -51,7 +50,6 @@ reference:
   - adjacency_neighbors
   - connected_components
   - shortest_path_distances
-  - is_symmetric_network_matrix
 - title: Embedding and estimation
   contents:
   - embedding_estimating
@@ -88,8 +86,6 @@ reference:
   - run_simulations
   - uni_mclapply
   - measure_peak_ram
-  - estimate_rspectra_ram
-  - available_ram
 articles:
 - title: Workflows
   navbar: ~

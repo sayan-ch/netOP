@@ -41,8 +41,11 @@
 #' @return The utility-specific scalar, diagnostic list, mapped list, or
 #'   simulation records described in each function's usage.
 #' @examples
-#' format_bytes(1024)
-#' estimate_dense_eigen_ram(20)
+#' run_simulations(
+#'   one_simulation = function(i, seed) i + seed,
+#'   nsim = 2, seed = 1, use_parallel_simulations = FALSE,
+#'   show_progress = FALSE
+#' )
 #' @name resource_utilities
 NULL
 
@@ -210,6 +213,9 @@ NULL
 #' @param matching_method,confirm_large Label-matching controls.
 #' @param verbose,force_windows,ram_check Diagnostic and backend controls.
 #' @param share_overlap Select the historical shared-overlap SONNET variant.
+#' @param regularize_subnetworks Apply Laplacian conversion and regularization
+#'   separately within each SONNET subnetwork. If `FALSE`, transform the full
+#'   network once before extracting subnetworks.
 #' @param parameter_select_options Named automatic-partition options.
 #' @param K_candidates,d_candidates,tau_candidates Candidate sets.
 #' @param nrep Number of model-selection repetitions.
@@ -223,7 +229,7 @@ NULL
 #' @param label_reference Reference labeling used for label losses.
 #' @param spectral_options,cluster_options,estimator_options Nested algorithm options.
 #' @param failure_handling Stop or omit failed tasks.
-#' @param laplacian,normalize_laplacian,handle_zero_degree_nodes Spectral controls.
+#' @param laplacian,normalize_laplacian,regularize_tau,handle_zero_degree_nodes Spectral controls.
 #' @param row_normalize,spectral_method,spectral_engine,cluster_engine Backend controls.
 #' @param retain_fits Retain fitted candidate models.
 #' @param g_true Ground-truth labels for oracle comparison.

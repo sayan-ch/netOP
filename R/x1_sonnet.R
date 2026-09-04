@@ -25,6 +25,9 @@
     ram_check = FALSE,
     share_overlap = TRUE,
     parameter_select_options = list(),
+    laplacian = FALSE,
+    regularize_tau = 0,
+    regularize_subnetworks = TRUE,
     ...) {
   call <- match.call()
   matching_method <- match.arg(matching_method)
@@ -158,7 +161,9 @@
     verbose = verbose,
     force_windows = force_windows,
     ram_check = ram_check,
-    share_overlap = share_overlap
+    share_overlap = share_overlap,
+    laplacian = laplacian,
+    regularize_subnetworks = regularize_subnetworks
   )
   invalid_logical <- vapply(
     logical_inputs,
@@ -189,6 +194,12 @@
     }
     seed <- as.double(seed)
   }
+  if (length(regularize_tau) != 1L || !is.numeric(regularize_tau) ||
+      is.na(regularize_tau) || !is.finite(regularize_tau) ||
+      regularize_tau < 0) {
+    stop("regularize_tau must be one finite non-negative number.",
+         call. = FALSE)
+  }
   spectral_arguments <- list(...)
   if (length(spectral_arguments) > 0L &&
       (is.null(names(spectral_arguments)) ||
@@ -197,7 +208,7 @@
   }
   reserved_spectral <- intersect(
     names(spectral_arguments),
-    c("A", "U", "K")
+    c("A", "U", "K", "laplacian", "regularize_tau")
   )
   if (length(reserved_spectral) > 0L) {
     stop(
@@ -236,6 +247,8 @@
     spectral_arguments,
     keep.null = TRUE
   )
+  resolved_spectral_arguments$laplacian <- laplacian
+  resolved_spectral_arguments$regularize_tau <- regularize_tau
   
   m <- floor((n - overlap_size) / num_subnetworks)
   remainder_count <- n - overlap_size - num_subnetworks * m
@@ -600,6 +613,47 @@
     ))
   }
   
+  whole_network_transform <- !regularize_subnetworks &&
+    (laplacian || regularize_tau > 0)
+  clustering_matrix <- A
+  if (whole_network_transform) {
+    if (!is_symmetric_matrix(clustering_matrix)) {
+      clustering_matrix <- if (inherits(clustering_matrix, "Matrix")) {
+        clustering_matrix + Matrix::t(clustering_matrix)
+      } else {
+        clustering_matrix + t(clustering_matrix)
+      }
+    }
+    if (laplacian) {
+      clustering_matrix <- -graph_laplacian(
+        clustering_matrix,
+        normalized = resolved_spectral_arguments$normalize_laplacian,
+        tau = regularize_tau
+      )
+      if (resolved_spectral_arguments$spectral_method == "svd") {
+        spectral_shift <- max(if (inherits(clustering_matrix, "Matrix")) {
+          Matrix::rowSums(abs(clustering_matrix))
+        } else {
+          rowSums(abs(clustering_matrix))
+        })
+        if (inherits(clustering_matrix, "Matrix")) {
+          Matrix::diag(clustering_matrix) <-
+            Matrix::diag(clustering_matrix) + spectral_shift
+        } else {
+          diag(clustering_matrix) <- diag(clustering_matrix) + spectral_shift
+        }
+      }
+    } else {
+      full_degrees <- if (inherits(clustering_matrix, "Matrix")) {
+        Matrix::rowSums(clustering_matrix)
+      } else {
+        rowSums(clustering_matrix)
+      }
+      clustering_matrix <- clustering_matrix +
+        regularize_tau * mean(full_degrees) / nrow(clustering_matrix)
+    }
+  }
+
   total_tasks <- num_subnetworks * (extra_nrep + 1L)
   clustering_ncores <- min(total_tasks, ncores)
   task_dimensions <- vapply(seq_len(total_tasks), function(task_id) {
@@ -618,7 +672,13 @@
       " worker(s)."
     )
   }
-  worker_spectral_arguments <- spectral_arguments
+  worker_spectral_arguments <- resolved_spectral_arguments
+  if (whole_network_transform) {
+    worker_spectral_arguments$laplacian <- FALSE
+    worker_spectral_arguments$regularize_tau <- 0
+    worker_spectral_arguments$handle_zero_degree_nodes <- "none"
+    worker_spectral_arguments$validate_inputs <- FALSE
+  }
   if ("spectral_options" %in% names(worker_spectral_arguments) &&
       is.list(worker_spectral_arguments$spectral_options)) {
     worker_spectral_arguments$spectral_options$ram_check <- NULL
@@ -635,7 +695,7 @@
           spectral_cluster,
           c(
             list(
-              A = A[index, index, drop = FALSE],
+              A = clustering_matrix[index, index, drop = FALSE],
               K = K,
               ram_check = FALSE
             ),
@@ -935,6 +995,9 @@
       force_windows = force_windows,
       ram_check = ram_check,
       share_overlap = share_overlap,
+      laplacian = laplacian,
+      regularize_tau = regularize_tau,
+      regularize_subnetworks = regularize_subnetworks,
       spectral_arguments = spectral_arguments,
       resolved_spectral_arguments = resolved_spectral_arguments
     ),
@@ -1000,6 +1063,9 @@ sonnet <- function(
     ram_check = FALSE,
     share_overlap = FALSE,
     parameter_select_options = list(),
+    laplacian = FALSE,
+    regularize_tau = 0,
+    regularize_subnetworks = TRUE,
     ...) {
   result <- .sonnet_fit(
     A = A,
@@ -1015,6 +1081,9 @@ sonnet <- function(
     force_windows = force_windows,
     ram_check = ram_check,
     share_overlap = share_overlap,
+    laplacian = laplacian,
+    regularize_tau = regularize_tau,
+    regularize_subnetworks = regularize_subnetworks,
     parameter_select_options = parameter_select_options,
     ...
   )

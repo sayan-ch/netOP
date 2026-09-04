@@ -13,7 +13,7 @@ netcrop_blockmodel <- function(
     num_subnetworks = NULL,
     overlap_size = NULL,
     nrep = 1L,
-    losses = c("sse", "bin_dev", "auc_as_loss"),
+    losses = "sse",
     model_candidates = c("SBM", "DCBM"),
     sbm_est_options = list(),
     dcbm_est_options = list(),
@@ -29,8 +29,12 @@ netcrop_blockmodel <- function(
     force_windows = FALSE,
     ram_check = FALSE,
     parameter_select_options = list(),
-    retain_intermediates = c("all", "minimal")) {
+    retain_intermediates = c("all", "minimal"),
+    laplacian = FALSE,
+    regularize_tau = 0) {
   call <- match.call()
+  laplacian_missing <- missing(laplacian)
+  regularize_tau_missing <- missing(regularize_tau)
   matching_method <- match.arg(matching_method)
   retain_intermediates <- match.arg(retain_intermediates)
   required_helpers <- c(
@@ -344,6 +348,53 @@ netcrop_blockmodel <- function(
     ),
     estimate = list(method = "plugin")
   )
+  legacy_spectral_values <- function(option_name) {
+    values <- list()
+    if ("SBM" %in% model_candidates &&
+        !is.null(sbm_est_options$spectral_cluster[[option_name]])) {
+      values$SBM <- sbm_est_options$spectral_cluster[[option_name]]
+    }
+    if ("DCBM" %in% model_candidates &&
+        !is.null(dcbm_est_options$spectral_cluster[[option_name]])) {
+      values$DCBM <- dcbm_est_options$spectral_cluster[[option_name]]
+    }
+    values
+  }
+  resolve_shared_direct_option <- function(value, was_missing, option_name) {
+    legacy <- legacy_spectral_values(option_name)
+    if (length(legacy) == 0L) {
+      return(value)
+    }
+    if (length(legacy) > 1L &&
+        !all(vapply(legacy[-1L], identical, logical(1), legacy[[1L]]))) {
+      stop(
+        "SBM and DCBM ", option_name, " options must agree.",
+        call. = FALSE
+      )
+    }
+    legacy_value <- legacy[[1L]]
+    if (!was_missing && !identical(value, legacy_value)) {
+      stop(
+        "Specify ", option_name, " directly or in estimator options, not both ",
+        "with different values.",
+        call. = FALSE
+      )
+    }
+    if (was_missing) legacy_value else value
+  }
+  laplacian <- resolve_shared_direct_option(
+    laplacian, laplacian_missing, "laplacian"
+  )
+  regularize_tau <- resolve_shared_direct_option(
+    regularize_tau, regularize_tau_missing, "regularize_tau"
+  )
+  laplacian <- validate_flag(laplacian, "laplacian")
+  if (length(regularize_tau) != 1L || !is.numeric(regularize_tau) ||
+      is.na(regularize_tau) || !is.finite(regularize_tau) ||
+      regularize_tau < 0) {
+    stop("regularize_tau must be one finite non-negative number.",
+         call. = FALSE)
+  }
   sbm_options <- merge_options(
     sbm_defaults,
     sbm_est_options,
@@ -364,6 +415,10 @@ netcrop_blockmodel <- function(
     dcbm_options$spectral_cluster,
     "dcbm_est_options$spectral_cluster"
   )
+  sbm_options$spectral_cluster$laplacian <- laplacian
+  dcbm_options$spectral_cluster$laplacian <- laplacian
+  sbm_options$spectral_cluster$regularize_tau <- regularize_tau
+  dcbm_options$spectral_cluster$regularize_tau <- regularize_tau
   sbm_options$spectral_cluster$cluster_options <- compatible_cluster_options(
     sbm_options$spectral_cluster$cluster_options,
     sbm_options$spectral_cluster$cluster_engine

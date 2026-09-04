@@ -33,7 +33,11 @@ mult_reg_spectral_cluster(
 
 \item{tau_candidates}{Candidate regularization values.}
 
-\item{laplacian, normalize_laplacian, handle_zero_degree_nodes}{Spectral controls.}
+\item{laplacian}{Convert adjacency matrices to graph Laplacians.}
+
+\item{normalize_laplacian}{Use symmetric normalized Laplacians.}
+
+\item{handle_zero_degree_nodes}{Zero-degree node policy.}
 
 \item{row_normalize, spectral_method, spectral_engine, cluster_engine}{Backend controls.}
 

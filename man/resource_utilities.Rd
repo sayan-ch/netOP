@@ -79,6 +79,9 @@ caller state and high-level RAM checks report conservative estimates rather
 than reserving memory.
 }
 \examples{
-format_bytes(1024)
-estimate_dense_eigen_ram(20)
+run_simulations(
+  one_simulation = function(i, seed) i + seed,
+  nsim = 2, seed = 1, use_parallel_simulations = FALSE,
+  show_progress = FALSE
+)
 }

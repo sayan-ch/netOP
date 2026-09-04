@@ -718,7 +718,6 @@ matrix_density <- function(A) {
 
 # Test matrix symmetry for both base and Matrix-package matrix classes.
 #' @rdname is_symmetric_matrix
-#' @export
 is_symmetric_matrix <- function(A) {
   if (inherits(A, "Matrix")) {
     if (!requireNamespace("Matrix", quietly = TRUE)) {

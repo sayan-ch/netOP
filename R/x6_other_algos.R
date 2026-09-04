@@ -329,7 +329,7 @@ ecv_stability_blockmodel <- function(
     cv = 3L,
     nrep = 20L,
     tau = 0,
-    losses = c("sse", "bin_dev", "auc_as_loss"),
+    losses = "sse",
     ncores = max(
       floor(parallel::detectCores() / 2),
       1L,
@@ -895,7 +895,7 @@ ncv_bm <- function(
     dc_est = c("spectral", "plugin"),
     tau = 0,
     use_laplacian = FALSE,
-    losses = c("sse", "bin_dev", "auc_as_loss"),
+    losses = "sse",
     ncores = max(
       floor(parallel::detectCores() / 2),
       1L,
@@ -1225,7 +1225,7 @@ ncv_stability_blockmodel <- function(
     dc_est = c("spectral", "plugin"),
     tau = 0,
     use_laplacian = FALSE,
-    losses = c("sse", "bin_dev", "auc_as_loss"),
+    losses = "sse",
     ncores = max(
       floor(parallel::detectCores() / 2),
       1L,

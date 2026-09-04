@@ -18,6 +18,14 @@ test_that("canonical model-selection openings support positional use", {
                    c("A", "max_d"))
   expect_identical(names(formals(ncv_stability_blockmodel))[1:2],
                    c("A", "max_K"))
+  expect_identical(formals(netcrop_blockmodel)$losses, "sse")
+  expect_identical(formals(netcrop_rdpg)$losses, "sse")
+  expect_identical(formals(netcrop_lsm)$losses, "sse")
+  expect_identical(formals(ecv_stability_blockmodel)$losses, "sse")
+  expect_identical(formals(ncv_stability_blockmodel)$losses, "sse")
+  expect_identical(formals(sonnet)$laplacian, FALSE)
+  expect_identical(formals(sonnet)$regularize_tau, 0)
+  expect_identical(formals(sonnet)$regularize_subnetworks, TRUE)
 })
 
 test_that("SONNET runs deterministically on a benchmark-derived small case", {
@@ -42,6 +50,56 @@ test_that("NETCROP block-model selection returns a classed result", {
   )
   expect_s3_class(fit, "netcrop_blockmodel")
   expect_identical(fit$algorithm, "NETCROP")
+})
+
+test_that("NETCROP block-model regularization controls are shared", {
+  A <- small_block_network(27)
+  direct <- netcrop_blockmodel(
+    A, 1:2, num_subnetworks = 2, overlap_size = 8, nrep = 1,
+    laplacian = TRUE, regularize_tau = 0.2,
+    ncores = 1, seed = 28, verbose = FALSE,
+    sbm_est_options = list(spectral_cluster = list(spectral_engine = "base")),
+    dcbm_est_options = list(spectral_cluster = list(spectral_engine = "base"))
+  )
+  expect_true(direct$sbm_est_options$spectral_cluster$laplacian)
+  expect_equal(
+    direct$sbm_est_options$spectral_cluster$regularize_tau, 0.2
+  )
+  expect_identical(
+    direct$sbm_est_options$spectral_cluster$laplacian,
+    direct$dcbm_est_options$spectral_cluster$laplacian
+  )
+
+  legacy <- netcrop_blockmodel(
+    A, 1:2, num_subnetworks = 2, overlap_size = 8, nrep = 1,
+    ncores = 1, seed = 28, verbose = FALSE,
+    sbm_est_options = list(spectral_cluster = list(
+      laplacian = TRUE, regularize_tau = 0.2, spectral_engine = "base"
+    )),
+    dcbm_est_options = list(spectral_cluster = list(
+      laplacian = TRUE, regularize_tau = 0.2, spectral_engine = "base"
+    ))
+  )
+  expect_equal(legacy$cv_loss, direct$cv_loss)
+})
+
+test_that("SONNET supports subnetwork and whole-network regularization", {
+  A <- small_block_network(29)
+  subnet <- sonnet(
+    A, 2, num_subnetworks = 2, overlap_size = 8, ncores = 1,
+    seed = 30, verbose = FALSE, spectral_engine = "base",
+    laplacian = TRUE, regularize_tau = 0.1
+  )
+  whole <- sonnet(
+    A, 2, num_subnetworks = 2, overlap_size = 8, ncores = 1,
+    seed = 30, verbose = FALSE, spectral_engine = "base",
+    laplacian = TRUE, regularize_tau = 0.1,
+    regularize_subnetworks = FALSE
+  )
+  expect_true(subnet$parameters$regularize_subnetworks)
+  expect_false(whole$parameters$regularize_subnetworks)
+  expect_length(subnet$labels, nrow(A))
+  expect_length(whole$labels, nrow(A))
 })
 
 test_that("ECV and NCV wrappers use new names and require no randnet calls", {

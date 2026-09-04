@@ -121,7 +121,6 @@ validate_network_for_io <- function(A) {
 #' @return A single logical value.
 #' @seealso [is_symmetric_matrix()]
 #' @rdname is_symmetric_network_matrix
-#' @export
 is_symmetric_network_matrix <- function(A, tolerance = 1e-10) {
   if (inherits(A, "Matrix")) {
     return(isTRUE(Matrix::isSymmetric(A, tol = tolerance)))

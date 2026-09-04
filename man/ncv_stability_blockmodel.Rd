@@ -12,7 +12,7 @@ ncv_stability_blockmodel(
   dc_est = c("spectral", "plugin"),
   tau = 0,
   use_laplacian = FALSE,
-  losses = c("sse", "bin_dev", "auc_as_loss"),
+  losses = "sse",
   ncores = max(floor(parallel::detectCores()/2), 1L, na.rm = TRUE),
   seed = NULL,
   verbose = TRUE,

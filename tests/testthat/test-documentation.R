@@ -65,11 +65,6 @@ test_that("only approved function families share public help topics", {
     c("scale_to_average_degree", "scale_to_average_degree_naive"),
     c("sonnet_shared_overlap", "sonnet_independent_overlap"),
     c("pair_hamming_loss", "pair_nmi_loss"),
-    c("estimate_dense_eigen_ram", "estimate_dense_svd_ram",
-      "estimate_partial_svd_ram", "estimate_rspectra_ram",
-      "estimate_spectral_decomp_ram", "estimate_matrix_product_ram"),
-    c("available_ram", "format_bytes", "warn_if_insufficient_ram",
-      "report_ram_preflight", "report_ram_formula"),
     c("mean", "sum", "diag", "rowMeans", "rowSums", "colMeans", "colSums")
   )
   exports <- getNamespaceExports("netOP")

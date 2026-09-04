@@ -15,7 +15,7 @@ netcrop_lsm <- function(
     num_subnetworks = NULL,
     overlap_size = NULL,
     nrep = 1L,
-    losses = c("sse", "bin_dev", "auc_as_loss"),
+    losses = "sse",
     lsm_options = list(),
     ncores = max(
       floor(parallel::detectCores() / 2),

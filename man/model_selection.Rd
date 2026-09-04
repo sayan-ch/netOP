@@ -26,6 +26,10 @@
 
 \item{share_overlap}{Select the historical shared-overlap SONNET variant.}
 
+\item{regularize_subnetworks}{Apply Laplacian conversion and regularization
+separately within each SONNET subnetwork. If \code{FALSE}, transform the full
+network once before extracting subnetworks.}
+
 \item{parameter_select_options}{Named automatic-partition options.}
 
 \item{K_candidates, d_candidates, tau_candidates}{Candidate sets.}
@@ -52,7 +56,7 @@
 
 \item{failure_handling}{Stop or omit failed tasks.}
 
-\item{laplacian, normalize_laplacian, handle_zero_degree_nodes}{Spectral controls.}
+\item{laplacian, normalize_laplacian, regularize_tau, handle_zero_degree_nodes}{Spectral controls.}
 
 \item{row_normalize, spectral_method, spectral_engine, cluster_engine}{Backend controls.}
 

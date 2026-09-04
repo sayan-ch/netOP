@@ -11,7 +11,7 @@ ecv_stability_blockmodel(
   cv = 3L,
   nrep = 20L,
   tau = 0,
-  losses = c("sse", "bin_dev", "auc_as_loss"),
+  losses = "sse",
   ncores = max(floor(parallel::detectCores()/2), 1L, na.rm = TRUE),
   seed = NULL,
   verbose = TRUE,

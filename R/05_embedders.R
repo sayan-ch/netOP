@@ -460,8 +460,8 @@ spectral_cluster <- function(
         nrow(A) != ncol(A) || nrow(A) < 1L) {
       stop("A must be a non-empty square matrix-like object.", call. = FALSE)
     }
-    if (!(is.numeric(A) || inherits(A, "Matrix")) ||
-        any(!is.finite(A)) || any(A < 0)) {
+    if (validate_inputs && (!(is.numeric(A) || inherits(A, "Matrix")) ||
+        any(!is.finite(A)) || any(A < 0))) {
       stop("A must contain only finite non-negative numeric values.",
            call. = FALSE)
     }
@@ -612,6 +612,7 @@ spectral_cluster <- function(
       }
     } else {
       spectral_matrix <- A_spectral
+      pretransformed_laplacian <- !validate_inputs && any(A_spectral < 0)
       if (regularize_tau > 0) {
         deg_spectral <- if (inherits(A_spectral, "Matrix")) {
           Matrix::rowSums(A_spectral)
@@ -622,7 +623,10 @@ spectral_cluster <- function(
           regularize_tau * mean(deg_spectral) / nrow(A_spectral)
       }
       decomposition_matrix <- spectral_matrix
-      spectral_order <- "magnitude"
+      # SONNET's whole-network Laplacian mode passes submatrices of -L with
+      # validation disabled. Those require algebraic, rather than magnitude,
+      # eigenvalue ordering to retain the smallest Laplacian eigenvectors.
+      spectral_order <- if (pretransformed_laplacian) "value" else "magnitude"
       spectral_shift <- 0
     }
 

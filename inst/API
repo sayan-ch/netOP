@@ -4,7 +4,6 @@ apply_average_degree_scaling
 ase
 auc
 auc_as_loss
-available_ram
 bin_dev
 bin_dev_mean
 clip_probabilities
@@ -19,15 +18,8 @@ ecv_stability_rdpg
 eig_decomp
 estimate_dcbm
 estimate_dcbm_P_hat
-estimate_dense_eigen_ram
-estimate_dense_svd_ram
-estimate_matrix_product_ram
-estimate_partial_svd_ram
-estimate_rspectra_ram
 estimate_sbm
 estimate_sbm_P_hat
-estimate_spectral_decomp_ram
-format_bytes
 generate_adjacency
 generate_community_labels
 generate_dcbm
@@ -45,8 +37,6 @@ get_generator_parameters
 graph_laplacian
 hardmax
 hardmin
-is_symmetric_matrix
-is_symmetric_network_matrix
 label_match_brute_force
 label_match_greedy
 largest_connected_component
@@ -73,8 +63,6 @@ pair_hamming_loss
 pair_nmi_loss
 procrustes
 read_network
-report_ram_formula
-report_ram_preflight
 rowMeans
 rowSums
 run_simulations
@@ -98,7 +86,6 @@ sum
 truncated_svd_reconstruct
 uni_mclapply
 usvt
-warn_if_insufficient_ram
 which_hardmax
 which_hardmin
 which_softmax

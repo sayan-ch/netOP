@@ -266,7 +266,6 @@ uni_mclapply <- function(
 # ps is deliberately optional. Different ps versions and operating systems use
 # slightly different field names, so check the known alternatives.
 #' @rdname ram_reporting
-#' @export
 available_ram <- function() {
   if (!requireNamespace("ps", quietly = TRUE)) {
     return(NA_real_)
@@ -288,7 +287,6 @@ available_ram <- function() {
 
 # Format a non-negative byte count using binary units.
 #' @rdname ram_reporting
-#' @export
 format_bytes <- function(x) {
   if (length(x) != 1L || !is.numeric(x) || is.na(x)) {
     return("unknown")
@@ -310,7 +308,6 @@ format_bytes <- function(x) {
 
 # Report estimated versus available RAM and warn above a conservative limit.
 #' @rdname ram_reporting
-#' @export
 warn_if_insufficient_ram <- function(
     estimated_bytes,
     max_fraction = 0.60,
@@ -380,7 +377,6 @@ warn_if_insufficient_ram <- function(
 
 # Estimate RAM for an RSpectra Lanczos/Arnoldi decomposition.
 #' @rdname ram_estimators
-#' @export
 estimate_rspectra_ram <- function(
     n,
     K,
@@ -403,7 +399,6 @@ estimate_rspectra_ram <- function(
 
 # Estimate RAM for a dense symmetric eigendecomposition.
 #' @rdname ram_estimators
-#' @export
 estimate_dense_eigen_ram <- function(
     n,
     input_already_counted = TRUE,
@@ -427,7 +422,6 @@ estimate_dense_eigen_ram <- function(
 
 # Estimate RAM for a partial rectangular singular decomposition.
 #' @rdname ram_estimators
-#' @export
 estimate_partial_svd_ram <- function(
     n,
     p,
@@ -454,7 +448,6 @@ estimate_partial_svd_ram <- function(
 
 # Estimate RAM for a dense rectangular singular decomposition.
 #' @rdname ram_estimators
-#' @export
 estimate_dense_svd_ram <- function(
     n,
     p,
@@ -486,7 +479,6 @@ estimate_dense_svd_ram <- function(
 
 # Estimate the output and packing workspace for one dense matrix product.
 #' @rdname ram_estimators
-#' @export
 estimate_matrix_product_ram <- function(
     nrow_left,
     shared_dimension,
@@ -514,7 +506,6 @@ estimate_matrix_product_ram <- function(
 
 # Estimate the decomposition selected by the audited fallback rules.
 #' @rdname ram_estimators
-#' @export
 estimate_spectral_decomp_ram <- function(
     n,
     p = n,
@@ -615,7 +606,6 @@ estimate_spectral_decomp_ram <- function(
 
 # Report an algorithm-level RAM estimate, optionally across parallel workers.
 #' @rdname ram_reporting
-#' @export
 report_ram_preflight <- function(
     estimated_bytes,
     operation,
@@ -665,7 +655,6 @@ report_ram_preflight <- function(
 
 # Report an additive high-level RAM formula with explicit operation factors.
 #' @rdname ram_reporting
-#' @export
 report_ram_formula <- function(terms, operation, detail = NULL) {
   if (!is.list(terms) || length(terms) < 1L) {
     stop("terms must be a non-empty list.", call. = FALSE)

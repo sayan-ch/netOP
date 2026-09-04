@@ -14,7 +14,7 @@ netcrop_blockmodel(
   num_subnetworks = NULL,
   overlap_size = NULL,
   nrep = 1L,
-  losses = c("sse", "bin_dev", "auc_as_loss"),
+  losses = "sse",
   model_candidates = c("SBM", "DCBM"),
   sbm_est_options = list(),
   dcbm_est_options = list(),
@@ -26,7 +26,9 @@ netcrop_blockmodel(
   force_windows = FALSE,
   ram_check = FALSE,
   parameter_select_options = list(),
-  retain_intermediates = c("all", "minimal")
+  retain_intermediates = c("all", "minimal"),
+  laplacian = FALSE,
+  regularize_tau = 0
 )
 
 \method{print}{netcrop_blockmodel}(x, ...)
@@ -65,6 +67,11 @@ netcrop_blockmodel(
 \item{parameter_select_options}{Named automatic-partition options.}
 
 \item{retain_intermediates}{Retain all or minimal intermediate results.}
+
+\item{laplacian}{Convert subnetwork adjacency matrices to graph Laplacians.}
+
+\item{regularize_tau}{Shared nonnegative regularization strength for both
+SBM and DCBM candidates.}
 
 \item{x, object}{An object handled by an S3 method.}
 

@@ -4,7 +4,6 @@ apply_average_degree_scaling           Apply average-degree scaling
 ase                                    Compute an adjacency spectral embedding
 auc                                    Compute an area under the ROC curve
 auc_as_loss                            Compute an AUC loss
-available_ram                          Query available RAM
 bin_dev                                Compute summed binary deviance
 bin_dev_mean                           Compute mean binary deviance
 clip_probabilities                     Clip probability values safely
@@ -19,15 +18,8 @@ ecv_stability_rdpg                     Select RDPG dimension with edge cross-val
 eig_decomp                             Compute an eigendecomposition
 estimate_dcbm                          Estimate a degree-corrected block model
 estimate_dcbm_P_hat                    Reconstruct DCBM edge probabilities
-estimate_dense_eigen_ram               Estimate dense eigendecomposition RAM
-estimate_dense_svd_ram                 Estimate dense SVD RAM
-estimate_matrix_product_ram            Estimate matrix-product RAM
-estimate_partial_svd_ram               Estimate partial-SVD RAM
-estimate_rspectra_ram                  Estimate RSpectra RAM
 estimate_sbm                           Estimate a stochastic block model
 estimate_sbm_P_hat                     Reconstruct SBM edge probabilities
-estimate_spectral_decomp_ram           Estimate spectral-decomposition RAM
-format_bytes                           Format a byte count
 generate_adjacency                     Sample a network from edge probabilities
 generate_community_labels              Generate or validate community labels
 generate_dcbm                          Generate a degree-corrected block-model network
@@ -45,8 +37,6 @@ get_generator_parameters               Retrieve attached generator parameters
 graph_laplacian                        Construct a graph Laplacian
 hardmax                                Compute a hard maximum selector
 hardmin                                Compute a hard minimum selector
-is_symmetric_matrix                    Test matrix symmetry
-is_symmetric_network_matrix            Test network-matrix symmetry
 label_match_brute_force                Match labels by exact search
 label_match_greedy                     Match labels greedily
 largest_connected_component            Extract the largest connected component
@@ -73,8 +63,6 @@ pair_hamming_loss                      Compute pairwise Hamming disagreement
 pair_nmi_loss                          Compute pairwise NMI disagreement
 procrustes                             Align point configurations
 read_network                           Read a network edge list
-report_ram_formula                     Report a combined RAM formula
-report_ram_preflight                   Report a RAM preflight estimate
 rowMeans                               Compute sparse or dense row means
 rowSums                                Compute sparse or dense row sums
 run_simulations                        Run reproducible simulation jobs
@@ -98,7 +86,6 @@ sum                                    Compute a sparse or dense matrix sum
 truncated_svd_reconstruct              Reconstruct a truncated SVD approximation
 uni_mclapply                           Apply a function consistently across platforms
 usvt                                   Apply universal singular-value thresholding
-warn_if_insufficient_ram               Warn about insufficient RAM
 which_hardmax                          Select a hard maximum index
 which_hardmin                          Select a hard minimum index
 which_softmax                          Select a soft maximum index

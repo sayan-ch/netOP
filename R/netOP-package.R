@@ -17,6 +17,26 @@
 #' @name netOP-package
 "_PACKAGE"
 
+#' Matrix summary generics
+#'
+#' These generics are re-exported from Matrix so that common summary
+#' operations dispatch correctly for sparse network matrices after loading
+#' netOP.
+#'
+#' @name matrix-generics
+#' @aliases mean diag rowMeans rowSums colMeans colSums sum
+#' @importFrom Matrix mean diag rowMeans rowSums colMeans colSums
+#' @export mean
+#' @export diag
+#' @export rowMeans
+#' @export rowSums
+#' @export colMeans
+#' @export colSums
+#' @export sum
+sum <- function(..., na.rm = FALSE) {
+  base::sum(..., na.rm = na.rm)
+}
+
 utils::globalVariables(c(
   "algorithm", "average_loss", "d", "K", "lower", "lower_percent",
   "mean_accuracy_percent", "mean_loss", "method", "model", "plotted_loss",

@@ -3,6 +3,18 @@ test_that("public namespace matches the explicit allowlist", {
   expect_setequal(getNamespaceExports("netOP"), allowlist)
 })
 
+test_that("common Matrix generics are re-exported for sparse networks", {
+  A <- Matrix::Matrix(matrix(c(0, 1, 1, 0), 2, 2), sparse = TRUE)
+
+  expect_equal(netOP::mean(A), 0.5)
+  expect_equal(netOP::diag(A), c(0, 0))
+  expect_equal(netOP::rowMeans(A), c(0.5, 0.5))
+  expect_equal(netOP::rowSums(A), c(1, 1))
+  expect_equal(netOP::colMeans(A), c(0.5, 0.5))
+  expect_equal(netOP::colSums(A), c(1, 1))
+  expect_equal(netOP::sum(A), 2)
+})
+
 test_that("implementation helpers remain internal", {
   exports <- getNamespaceExports("netOP")
   denylist <- c(

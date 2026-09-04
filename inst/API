@@ -9,8 +9,11 @@ bin_dev
 bin_dev_mean
 clip_probabilities
 clip_values
+colMeans
+colSums
 connected_components
 dkest_tune_regularizer
+diag
 ecv_stability_blockmodel
 ecv_stability_rdpg
 eig_decomp
@@ -50,6 +53,7 @@ largest_connected_component
 lsm_pgd
 mae
 matrix_density
+mean
 measure_peak_ram
 modal
 mse
@@ -71,6 +75,8 @@ procrustes
 read_network
 report_ram_formula
 report_ram_preflight
+rowMeans
+rowSums
 run_simulations
 sae
 scale_lsm_to_average_degree
@@ -88,6 +94,7 @@ sonnet_param_select
 sonnet_shared_overlap
 spectral_cluster
 sse
+sum
 truncated_svd_reconstruct
 uni_mclapply
 usvt

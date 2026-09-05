@@ -188,6 +188,36 @@ op_splitter <- function(
 # counts are integers and (n - o) must be divisible by s. By default the
 # overlap starts at min(K^3, n - s_lower), while its upper bound n - s is
 # applied separately for each candidate s.
+#' Select SONNET partition parameters
+#'
+#' Selects the number of subnetworks and their common overlap by a constrained
+#' integer grid search. Computational cost is evaluated as
+#' `s * ((o + (n - o) / s) / n)^theta` without forming `n^theta`. Feasible
+#' candidates have cost no greater than `q * ncores`, and `(n - o)` must be
+#' divisible by `s`. If none meets the requested budget, the least-cost
+#' admissible candidate is returned and the effective `q` is increased.
+#'
+#' @param n Positive integer network size, at least 3.
+#' @param K Positive integer number of communities, no larger than `n`; used to
+#'   choose the default lower overlap bound.
+#' @param theta Positive computational-complexity exponent.
+#' @param q Number in `(0, 1]` giving the target sequential computational
+#'   fraction per available core.
+#' @param ncores Positive integer number of cores included in the computational
+#'   budget.
+#' @param s_lower,s_upper Numeric lower and upper bounds for the number of
+#'   subnetworks. Bounds are normalized to admissible integers.
+#' @param o_lower,o_upper Optional numeric lower and upper bounds for overlap
+#'   size. `NULL` uses `min(K^3, n - s_lower)` for the lower bound and the
+#'   largest admissible overlap for the upper bound.
+#'
+#' @return A named list containing the selected `num_subnetworks` and
+#'   `overlap_size`, piece size, objective and computational fractions,
+#'   requested and effective tuning values, search counts, and normalized
+#'   bounds.
+#' @seealso [sonnet()], [netcrop_param_select()]
+#' @examples
+#' sonnet_param_select(n = 200, K = 3, ncores = 1)
 #' @rdname sonnet_param_select
 #' @export
 sonnet_param_select <- function(
@@ -446,6 +476,27 @@ sonnet_param_select <- function(
 # of exactly one is replaced by 0.8 to avoid the singular upper endpoint. When
 # n is supplied, remainder nodes augment the overlap so the remaining nodes
 # divide evenly among the selected subnetworks.
+#' Select NETCROP partition parameters
+#'
+#' Converts a requested test proportion and one or more overlap-range positions
+#' into NETCROP subnetwork counts and overlap proportions. An `o_range` value of
+#' exactly one is replaced by `0.8` to avoid the singular upper endpoint. When
+#' `n` is supplied, remainder nodes augment the overlap so the remaining nodes
+#' divide evenly among the selected subnetworks.
+#'
+#' @param test_prop One finite number in `(0, 0.5]` giving the target fraction
+#'   of unordered node pairs held out by a NETCROP split.
+#' @param n Optional integer network size from 3 through R's maximum supported
+#'   integer. When supplied, integer subnetwork and overlap sizes are returned.
+#' @param o_range Numeric vector with values in `[0, 1]` locating candidate
+#'   overlaps between the lower and upper proportions implied by `test_prop`.
+#'
+#' @return A named list describing candidate subnetwork counts and overlap
+#'   proportions. When `n` is supplied, it also contains integer overlap and
+#'   piece sizes, remainder adjustments, and realized test proportions.
+#' @seealso [netcrop_blockmodel()], [netcrop_rdpg()], [netcrop_lsm()]
+#' @examples
+#' netcrop_param_select(test_prop = 0.05, n = 200, o_range = c(0, 0.8))
 #' @rdname netcrop_param_select
 #' @export
 netcrop_param_select <- function(

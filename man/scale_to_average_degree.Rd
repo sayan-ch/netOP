@@ -28,11 +28,11 @@ scale_to_average_degree_naive(
 
 \item{average_degree}{Target expected average row degree.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal probabilities count toward degree.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
 
-\item{tolerance}{Numerical comparison or calibration tolerance.}
+\item{tolerance}{Positive bisection convergence tolerance.}
 
 \item{max_iterations}{Positive maximum number of bisection iterations.}
 }
@@ -45,6 +45,15 @@ scaling rule to a dense or sparse probability matrix.
 
 \code{scale_to_average_degree_naive()} applies the historical
 one-step ratio before clipping and loop removal.
+}
+\examples{
+P <- matrix(0.1, 200, 200)
+diag(P) <- 0
+scaled <- scale_to_average_degree(
+  P, average_degree = 5, self_loops = FALSE,
+  lower_clip = 0, upper_clip = 1
+)
+mean(rowSums(scaled$P))
 }
 \seealso{
 \code{\link[=apply_average_degree_scaling]{apply_average_degree_scaling()}}, \code{\link[=scale_lsm_to_average_degree]{scale_lsm_to_average_degree()}}

@@ -3,6 +3,27 @@
 # Package loading resolves all internal estimator and splitting helpers.
 # This implementation uses observed-network cross-validation only.
 
+#' Compare pairs of clusterings
+#'
+#' Forms the Cartesian-product clustering induced by each pair of community
+#' label vectors, then compares the two induced clusterings.
+#'
+#' @details
+#' `pair_nmi_loss()` returns negative normalized mutual information. If both
+#' product clusterings contain only one class, it returns `-1`.
+#' `pair_hamming_loss()` aligns the product labels with the dependency-free
+#' Hungarian implementation before returning their mismatch proportion.
+#'
+#' @param g_1,g_2 Finite positive-integer label vectors defining the first
+#'   Cartesian-product clustering.
+#' @param g_3,g_4 Finite positive-integer label vectors defining the second
+#'   Cartesian-product clustering. Its product size must match the first.
+#' @return `pair_nmi_loss()` returns a numeric negative-NMI loss.
+#'   `pair_hamming_loss()` returns a numeric mismatch proportion.
+#' @examples
+#' pair_nmi_loss(c(1, 1, 2), c(1, 2), c(1, 1, 2), c(1, 2))
+#' pair_hamming_loss(c(1, 1, 2), c(1, 2), c(2, 2, 1), c(2, 1))
+#' @seealso [nmi()], [label_match_greedy()]
 # Compare two pairs of community-label vectors using negative NMI.
 #' @rdname pairwise_clustering_losses
 #' @export
@@ -54,6 +75,63 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
   )$mismatch_rate
 }
 
+#' Tune a network regularizer with NETCROP
+#'
+#' Selects a spectral regularization parameter by overlapping-subnetwork
+#' cross-validation for an SBM or DCBM.
+#'
+#' @details
+#' The function clusters overlapping subnetworks for every candidate, aligns
+#' their labels, estimates block-model probabilities, and evaluates held-out
+#' edges between non-overlap pieces. Missing partition parameters are selected
+#' with [netcrop_param_select()]. `K = 1` returns invisibly because no
+#' clustering-based regularizer selection is required.
+#'
+#' @param A Finite symmetric, loop-free adjacency matrix.
+#' @param K Fixed positive number of communities.
+#' @param tau_candidates Unique finite nonnegative regularization candidates.
+#' @param use_dcbm Use a degree-corrected rather than ordinary block model.
+#' @param num_subnetworks Number of overlapping subnetworks; `NULL` selects it
+#'   automatically.
+#' @param overlap_size Number of overlap nodes; `NULL` selects it automatically.
+#' @param nrep Positive number of independently sampled partitions.
+#' @param use_laplacian Cluster a regularized graph Laplacian.
+#' @param dcbm_est_method DCBM estimator, either `"plugin"` or `"spectral"`.
+#' @param losses Canonical validation losses to evaluate.
+#' @param loss_types Optional named mapping for compatible legacy loss labels.
+#' @param label_reference Whether label losses use a full-network reference or
+#'   a leave-pair-out reference.
+#' @param spectral_options,cluster_options,estimator_options Named option lists
+#'   forwarded to the corresponding fitting stages.
+#' @param matching_method Label-alignment method.
+#' @param confirm_large Confirm potentially factorial brute-force matching.
+#' @param ncores Positive worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param parameter_select_options Named options for automatic partition
+#'   selection.
+#' @param retain_intermediates Retain all or minimal intermediate results.
+#' @param x,object A fitted `netcrop_regularizer` object handled by an S3
+#'   method.
+#' @param aggregate Aggregate repetitions when plotting.
+#' @param ... Additional arguments for S3 method compatibility.
+#' @return A `netcrop_regularizer` object containing candidate loss curves,
+#'   per-repetition and overall selections, resolved options, partition and
+#'   matching diagnostics, worker counts, timings, and optional intermediates.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 31, ncores = 1)
+#' fit <- netcrop_tune_regularizer(
+#'   A, K = 3, tau_candidates = c(0, 0.1),
+#'   num_subnetworks = 2, overlap_size = 20,
+#'   nrep = 1, ncores = 1, seed = 32, verbose = FALSE
+#' )
+#' fit
+#' }
+#' @seealso [dkest_tune_regularizer()], [mult_reg_spectral_cluster()]
 # Select a spectral regularization parameter by overlapping-subnetwork CV.
 #' @rdname netcrop_tune_regularizer
 #' @export

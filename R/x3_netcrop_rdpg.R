@@ -5,6 +5,67 @@
 # non-reference embedding through the overlap, and evaluate every unordered
 # pair of non-overlap pieces. Package loading resolves all internal helpers.
 
+#' Select RDPG dimension with NETCROP
+#'
+#' Selects a symmetric random-dot-product-graph (RDPG) dimension by
+#' overlapping-subnetwork cross-validation. The procedure decomposes every
+#' subnetwork, constructs each candidate embedding, aligns non-reference
+#' embeddings through the overlap, and evaluates every unordered pair of
+#' non-overlap pieces.
+#'
+#' @param A Finite square symmetric numeric adjacency matrix with zero diagonal,
+#'   including a supported sparse `Matrix` object.
+#' @param d_candidates Non-empty vector of positive integer latent dimensions;
+#'   duplicates are discarded. Dimensions must be smaller than the effective
+#'   subgraph size; conventionally the candidate vector is `1:5`.
+#' @param num_subnetworks Optional integer number of subnetworks, at least 2. If
+#'   it or `overlap_size` is `NULL`, missing values are selected with
+#'   [netcrop_param_select()].
+#' @param overlap_size Optional positive integer overlap size. It must leave
+#'   enough non-overlap nodes for the requested subnetworks and dimensions.
+#' @param nrep Positive integer number of independent NETCROP repetitions.
+#' @param losses Character vector naming prediction-loss functions available in
+#'   the calling environment, such as `"sse"`.
+#' @param eig_options Named list of additional options passed to
+#'   [eig_decomp()].
+#' @param ncores Positive integer worker count used across decomposition,
+#'   embedding, alignment, and loss tasks.
+#' @param seed Optional nonnegative integer-like reproducibility seed.
+#' @param verbose Whether to print progress messages.
+#' @param force_windows Whether to force the Windows-compatible parallel
+#'   backend, including for backend testing on other platforms.
+#' @param ram_check Whether to run RAM preflight checks before major operations.
+#' @param parameter_select_options Named list of additional options passed to
+#'   [netcrop_param_select()] when partition parameters are selected
+#'   automatically.
+#' @param retain_intermediates Either `"all"` or `"minimal"`, controlling how
+#'   many embeddings and intermediate arrays are retained.
+#' @param x A `netcrop_rdpg` or `summary.netcrop_rdpg` object. For plotting, it
+#'   is the first result to display or compare.
+#' @param object A fitted `netcrop_rdpg` object to summarize.
+#' @param aggregate Whether a plot should aggregate loss curves across
+#'   repetitions. A `netcrop_rdpg` object in this position instead starts a
+#'   comparison plot.
+#' @param ... Additional plotting arguments or further `netcrop_rdpg` objects
+#'   for comparison; ignored by print and summary methods.
+#'
+#' @return `netcrop_rdpg()` returns an object of class `netcrop_rdpg` containing
+#'   candidate-wise cross-validation losses, repetition and overall dimension
+#'   selections, split and eigenvalue diagnostics, retained intermediates,
+#'   resource information, and timing. `summary.netcrop_rdpg()` returns a
+#'   compact summary object; print methods return their input invisibly, and the
+#'   plot method returns a `ggplot` object.
+#' @seealso [ecv_stability_rdpg()], [ase()]
+#' @examples
+#' \donttest{
+#' A <- generate_rdpg(n = 200, d = 3, seed = 7, ncores = 1)
+#' fit <- netcrop_rdpg(
+#'   A, d_candidates = 1:5, num_subnetworks = 2, overlap_size = 30,
+#'   ncores = 1, seed = 8, verbose = FALSE
+#' )
+#' fit
+#' summary(fit)
+#' }
 #' @rdname netcrop_rdpg
 #' @export
 netcrop_rdpg <- function(
@@ -746,6 +807,7 @@ netcrop_rdpg <- function(
 }
 
 # Print the selected RDPG dimension for every requested loss.
+#' Print the selected RDPG dimension for every requested loss.
 #' @rdname netcrop_rdpg
 #' @export
 print.netcrop_rdpg <- function(x, ...) {
@@ -757,6 +819,7 @@ print.netcrop_rdpg <- function(x, ...) {
 }
 
 # Summarize a symmetric-RDPG NETCROP fit.
+#' Summarize dimension selections, diagnostics, and timing.
 #' @rdname netcrop_rdpg
 #' @export
 summary.netcrop_rdpg <- function(object, ...) {
@@ -810,6 +873,7 @@ summary.netcrop_rdpg <- function(object, ...) {
 }
 
 # Print a symmetric-RDPG NETCROP summary.
+#' Print a `summary.netcrop_rdpg` object.
 #' @rdname netcrop_rdpg
 #' @export
 print.summary.netcrop_rdpg <- function(x, ...) {
@@ -873,6 +937,7 @@ print.summary.netcrop_rdpg <- function(x, ...) {
 }
 
 # Plot RDPG CV loss curves, optionally aggregating across repetitions.
+#' Plot loss curves, optionally aggregating repetitions or comparing fits.
 #' @rdname netcrop_rdpg
 #' @export
 plot.netcrop_rdpg <- function(x, aggregate = TRUE, ...) {

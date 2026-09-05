@@ -17,7 +17,6 @@ netOP/
 │   ├── 01_basic_helpers.R through 06_estimators.R
 │   ├── x0_helpers.R through x6_other_algos.R
 │   ├── RcppExports.R         Generated internal compiled wrappers
-│   ├── api-docs.R            Shared public roxygen topics
 │   └── netOP-package.R       Package documentation and native registration
 ├── src/
 │   ├── 02_math_helpers.cpp

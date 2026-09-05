@@ -7,6 +7,65 @@
 # non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an LSM latent dimension by overlapping-subnetwork cross-validation.
+#' Select latent-space dimension with NETCROP
+#'
+#' Selects a latent-space-model (LSM) dimension by overlapping-subnetwork
+#' cross-validation. The procedure fits every candidate on every subnetwork,
+#' exactly reparameterizes each fitted inner-product model as a squared-distance
+#' model, rigidly aligns fits through the overlap, and evaluates every unordered
+#' pair of non-overlap pieces.
+#'
+#' @param A Finite square symmetric binary adjacency matrix with zero diagonal,
+#'   including a supported sparse `Matrix` object.
+#' @param d_candidates Non-empty vector of positive integer latent dimensions;
+#'   duplicates are discarded. Dimensions must be smaller than the effective
+#'   subgraph size; conventionally the candidate vector is `1:5`.
+#' @param num_subnetworks Optional integer number of subnetworks, at least 2. If
+#'   it or `overlap_size` is `NULL`, missing values are selected with
+#'   [netcrop_param_select()].
+#' @param overlap_size Optional positive integer overlap size. It must leave
+#'   enough non-overlap nodes for the requested subnetworks and dimensions.
+#' @param nrep Positive integer number of independent NETCROP repetitions.
+#' @param losses Character vector naming prediction-loss functions available in
+#'   the calling environment, such as `"sse"`.
+#' @param lsm_options Named list of additional options passed to [lsm_pgd()].
+#' @param ncores Positive integer worker count used across fitting, alignment,
+#'   and loss tasks.
+#' @param seed Optional nonnegative integer-like reproducibility seed.
+#' @param verbose Whether to print progress messages.
+#' @param force_windows Whether to force the Windows-compatible parallel
+#'   backend, including for backend testing on other platforms.
+#' @param ram_check Whether to run RAM preflight checks before major operations.
+#' @param parameter_select_options Named list of additional options passed to
+#'   [netcrop_param_select()] when partition parameters are selected
+#'   automatically.
+#' @param retain_intermediates Either `"all"` or `"minimal"`, controlling how
+#'   many fitted models and intermediate arrays are retained.
+#' @param x A `netcrop_lsm` or `summary.netcrop_lsm` object to print or plot.
+#' @param object A fitted `netcrop_lsm` object to summarize.
+#' @param aggregate Whether a plot should aggregate loss curves across
+#'   repetitions.
+#' @param ... Additional arguments, currently ignored by the print, summary,
+#'   and plot methods.
+#'
+#' @return `netcrop_lsm()` returns an object of class `netcrop_lsm` containing
+#'   candidate-wise cross-validation losses, repetition and overall dimension
+#'   selections, split diagnostics, fitted LSM options, retained intermediates,
+#'   resource information, and timing. `summary.netcrop_lsm()` returns a compact
+#'   summary object; print methods return their input invisibly, and the plot
+#'   method returns a `ggplot` object.
+#' @seealso [generate_lsm()], [lsm_pgd()]
+#' @examples
+#' \donttest{
+#' A <- generate_lsm(n = 200, d = 3, K = 3, seed = 9, ncores = 1)
+#' fit <- netcrop_lsm(
+#'   A, d_candidates = 1:5, num_subnetworks = 2, overlap_size = 30,
+#'   ncores = 1, seed = 10, verbose = FALSE,
+#'   lsm_options = list(niter = 20)
+#' )
+#' fit
+#' summary(fit)
+#' }
 #' @rdname netcrop_lsm
 #' @export
 netcrop_lsm <- function(
@@ -750,6 +809,7 @@ netcrop_lsm <- function(
 }
 
 # Print the selected LSM dimension for every requested loss.
+#' Print the selected LSM dimension for every requested loss.
 #' @rdname netcrop_lsm
 #' @export
 print.netcrop_lsm <- function(x, ...) {
@@ -760,6 +820,7 @@ print.netcrop_lsm <- function(x, ...) {
 }
 
 # Summarize an LSM NETCROP fit.
+#' Summarize dimension selections, split diagnostics, and timing.
 #' @rdname netcrop_lsm
 #' @export
 summary.netcrop_lsm <- function(object, ...) {
@@ -783,6 +844,7 @@ summary.netcrop_lsm <- function(object, ...) {
 }
 
 # Print an LSM NETCROP summary.
+#' Print a `summary.netcrop_lsm` object.
 #' @rdname netcrop_lsm
 #' @export
 print.summary.netcrop_lsm <- function(x, ...) {
@@ -815,6 +877,7 @@ print.summary.netcrop_lsm <- function(x, ...) {
 }
 
 # Plot LSM CV loss curves, optionally aggregating across repetitions.
+#' Plot candidate loss curves by repetition or in aggregate.
 #' @rdname netcrop_lsm
 #' @export
 plot.netcrop_lsm <- function(x, aggregate = TRUE, ...) {

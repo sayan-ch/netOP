@@ -25,7 +25,6 @@ reference:
   - write_network
 - title: Mathematical and graph utilities
   contents:
-  - math_utilities
   - sse
   - sae
   - bin_dev
@@ -46,7 +45,6 @@ reference:
   - truncated_svd_reconstruct
   - usvt
   - matrix-generics
-  - network_utilities
   - adjacency_neighbors
   - connected_components
   - shortest_path_distances
@@ -61,7 +59,6 @@ reference:
   - label_match_greedy
 - title: Model selection
   contents:
-  - model_selection
   - sonnet
   - sonnet_overlap_variants
   - sonnet_param_select
@@ -82,7 +79,6 @@ reference:
   - oracle_plotter
 - title: Simulation and resource planning
   contents:
-  - resource_utilities
   - run_simulations
   - uni_mclapply
   - measure_peak_ram

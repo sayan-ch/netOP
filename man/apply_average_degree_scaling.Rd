@@ -16,17 +16,28 @@ apply_average_degree_scaling(
 \arguments{
 \item{P}{Dense or sparse edge-probability matrix.}
 
-\item{average_degree, average_degree_method}{Expected-degree target and calibration method.}
+\item{average_degree}{Target expected average row degree.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{average_degree_method}{Scaling method, either \code{"naive"} or
+\code{"calibrated"}.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{self_loops}{Whether diagonal probabilities count toward degree.}
+
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
 }
 \value{
 A list containing the scaled probability matrix \code{P} and \code{multiplier}.
 }
 \description{
 Dispatches to the calibrated or historical probability-scaling rule.
+}
+\examples{
+P <- matrix(0.1, 200, 200)
+diag(P) <- 0
+apply_average_degree_scaling(
+  P, average_degree = 5, average_degree_method = "naive",
+  self_loops = FALSE, lower_clip = 0, upper_clip = 1
+)$multiplier
 }
 \seealso{
 \code{\link[=scale_to_average_degree]{scale_to_average_degree()}}, \code{\link[=scale_lsm_to_average_degree]{scale_lsm_to_average_degree()}}

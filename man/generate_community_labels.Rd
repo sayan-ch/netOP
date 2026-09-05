@@ -17,7 +17,9 @@ generate_community_labels(
 
 \item{K}{Positive number of communities.}
 
-\item{g_true, community_probabilities}{Labels or community proportions.}
+\item{g_true}{Optional supplied community-label vector.}
+
+\item{community_probabilities}{Optional length-\code{K} community probabilities.}
 
 \item{seed}{Optional nonnegative reproducibility seed.}
 }
@@ -26,6 +28,10 @@ An integer vector of length \code{n} with values from \code{1} through \code{K}.
 }
 \description{
 Produces community memberships for an SBM, DCBM, or latent-space model.
+}
+\examples{
+g <- generate_community_labels(n = 200, K = 3, seed = 5)
+table(g)
 }
 \seealso{
 \code{\link[=generate_sbm]{generate_sbm()}}, \code{\link[=generate_dcbm]{generate_dcbm()}}, \code{\link[=generate_lsm_positions]{generate_lsm_positions()}}

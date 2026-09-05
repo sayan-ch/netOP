@@ -9,13 +9,17 @@ generate_inverse_beta_degree_parameters(n, shape_1 = 4, shape_2 = 1)
 \arguments{
 \item{n}{Nonnegative number of degree parameters.}
 
-\item{shape_1, shape_2}{Beta distribution shapes.}
+\item{shape_1, shape_2}{Positive beta-distribution shape parameters.}
 }
 \value{
 A nonnegative numeric vector of length \code{n}.
 }
 \description{
 Draws the historical default degree parameters used by the DCBM generator.
+}
+\examples{
+psi <- generate_inverse_beta_degree_parameters(200)
+length(psi)
 }
 \seealso{
 \code{\link[=generate_degree_parameters]{generate_degree_parameters()}}, \code{\link[=generate_dcbm]{generate_dcbm()}}

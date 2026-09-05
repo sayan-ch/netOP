@@ -17,17 +17,22 @@ scale_lsm_to_average_degree(
 )
 }
 \arguments{
-\item{theta}{A latent-space logit matrix.}
+\item{theta}{Finite square latent-space logit matrix.}
 
-\item{average_degree, average_degree_method}{Expected-degree target and calibration method.}
+\item{average_degree}{Target expected average degree.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{average_degree_method}{Scaling method, either \code{"naive"} or
+\code{"calibrated"}.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{self_loops}{Whether diagonal probabilities count toward degree.}
 
-\item{tolerance}{Numerical comparison or calibration tolerance.}
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
 
-\item{max_iterations, naive_iterations}{Calibration iteration limits.}
+\item{naive_iterations}{Positive iteration count for historical scaling.}
+
+\item{tolerance}{Positive bisection convergence tolerance.}
+
+\item{max_iterations}{Positive maximum number of bisection iterations.}
 }
 \value{
 A list containing the probability matrix \code{P} and \code{intercept_shift}.
@@ -35,6 +40,12 @@ A list containing the probability matrix \code{P} and \code{intercept_shift}.
 \description{
 Shifts an LSM logit matrix using the historical iterative method or calibrated
 bisection.
+}
+\examples{
+Z <- matrix(stats::rnorm(200 * 3), 200, 3)
+theta <- -tcrossprod(Z)
+scaled <- scale_lsm_to_average_degree(theta, average_degree = 5)
+mean(rowSums(scaled$P))
 }
 \seealso{
 \code{\link[=generate_lsm]{generate_lsm()}}, \code{\link[=scale_to_average_degree]{scale_to_average_degree()}}

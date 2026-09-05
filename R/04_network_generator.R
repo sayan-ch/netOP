@@ -8,6 +8,15 @@
 # get_generator_parameters(). The full n-by-n probability matrix is not stored
 # as an attribute because doing so would defeat the memory benefit of sparse A.
 
+#' Network input, generation, and probability calibration
+#'
+#' Read and write edge lists and generate ER, SBM, DCBM, RDPG, and latent-space
+#' networks. Generators return an adjacency matrix with compact truth metadata
+#' available through [get_generator_parameters()].
+#'
+#' @name network_generators
+NULL
+
 # Validate a single logical input.
 validate_generator_logical <- function(value, name) {
   if (length(value) != 1L || !is.logical(value) || is.na(value)) {
@@ -89,8 +98,11 @@ set_generator_parameters <- function(A, parameters) {
 #' Returns the compact generating parameters stored on a network produced by a
 #' netOP generator. Both dense and sparse generated matrices are supported.
 #'
-#' @inheritParams network_generators
+#' @param A A network returned by a netOP generator.
 #' @return A named list of generating parameters, or `NULL` when none is attached.
+#' @examples
+#' A <- generate_er(n = 200, average_degree = 5, seed = 1, ncores = 1)
+#' get_generator_parameters(A)
 #' @seealso [generate_er()], [generate_sbm()], [generate_rdpg()], [generate_lsm()]
 #' @rdname get_generator_parameters
 #' @export
@@ -117,7 +129,8 @@ validate_network_for_io <- function(A) {
 #' Tests symmetry for either a base matrix or a sparse `Matrix` object without
 #' requiring users to attach Matrix.
 #'
-#' @inheritParams network_generators
+#' @param A A finite dense or sparse network matrix.
+#' @param tolerance Nonnegative numerical symmetry tolerance.
 #' @return A single logical value.
 #' @seealso [is_symmetric_matrix()]
 #' @rdname is_symmetric_network_matrix
@@ -144,10 +157,31 @@ resolve_network_format <- function(file, format) {
 #' node columns and an optional weight column. Metadata preserves network size,
 #' direction, and weighting, including when isolated nodes are absent.
 #'
-#' @inheritParams network_generators
-#' @param n Optional network size, used when metadata cannot determine it.
+#' @param A A finite square dense or sparse network matrix to write.
+#' @param file Edge-list file path.
+#' @param directed Optional direction indicator; inferred from metadata or
+#'   symmetry when omitted.
+#' @param weighted Optional weight indicator; inferred from edge values when
+#'   omitted.
+#' @param triangle For undirected output, which matrix triangle to write.
+#' @param format Delimited format: `"auto"`, `"csv"`, or `"tsv"`.
+#' @param include_header Whether `write_network()` writes column names.
+#' @param overwrite Whether `write_network()` may replace an existing file.
+#' @param tolerance Numerical tolerance used when checking symmetry and weights.
+#' @param representation Whether `read_network()` returns a sparse or dense
+#'   matrix.
+#' @param n Optional network size used by `read_network()` when metadata cannot
+#'   determine it.
+#' @param has_header Whether an input edge list has a header row.
 #' @return `write_network()` invisibly returns `file`; `read_network()` returns
 #'   a dense matrix or sparse `dgCMatrix`, according to `representation`.
+#' @examples
+#' A <- generate_er(n = 200, average_degree = 5, seed = 2, ncores = 1)
+#' path <- tempfile(fileext = ".csv")
+#' write_network(A, path, format = "csv")
+#' A_roundtrip <- read_network(path, format = "csv")
+#' unlink(path)
+#' dim(A_roundtrip)
 #' @seealso [generate_adjacency()]
 #' @rdname network_io
 #' @export
@@ -480,11 +514,21 @@ clip_generator_probabilities <- function(P, lower_clip, upper_clip) {
 #' These twin functions apply calibrated bisection or the historical one-step
 #' scaling rule to a dense or sparse probability matrix.
 #'
-#' @inheritParams network_generators
 #' @param P Dense or sparse edge-probability matrix.
 #' @param average_degree Target expected average row degree.
+#' @param self_loops Whether diagonal probabilities count toward degree.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
+#' @param tolerance Positive bisection convergence tolerance.
 #' @param max_iterations Positive maximum number of bisection iterations.
 #' @return A list containing the scaled probability matrix `P` and `multiplier`.
+#' @examples
+#' P <- matrix(0.1, 200, 200)
+#' diag(P) <- 0
+#' scaled <- scale_to_average_degree(
+#'   P, average_degree = 5, self_loops = FALSE,
+#'   lower_clip = 0, upper_clip = 1
+#' )
+#' mean(rowSums(scaled$P))
 #' @seealso [apply_average_degree_scaling()], [scale_lsm_to_average_degree()]
 #' @rdname scale_to_average_degree
 #' @export
@@ -625,9 +669,20 @@ scale_to_average_degree_naive <- function(
 #'
 #' Dispatches to the calibrated or historical probability-scaling rule.
 #'
-#' @inheritParams network_generators
 #' @param P Dense or sparse edge-probability matrix.
+#' @param average_degree Target expected average row degree.
+#' @param average_degree_method Scaling method, either `"naive"` or
+#'   `"calibrated"`.
+#' @param self_loops Whether diagonal probabilities count toward degree.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
 #' @return A list containing the scaled probability matrix `P` and `multiplier`.
+#' @examples
+#' P <- matrix(0.1, 200, 200)
+#' diag(P) <- 0
+#' apply_average_degree_scaling(
+#'   P, average_degree = 5, average_degree_method = "naive",
+#'   self_loops = FALSE, lower_clip = 0, upper_clip = 1
+#' )$multiplier
 #' @seealso [scale_to_average_degree()], [scale_lsm_to_average_degree()]
 #' @rdname apply_average_degree_scaling
 #' @export
@@ -661,11 +716,20 @@ apply_average_degree_scaling <- function(
 #' Samples a dense or sparse adjacency matrix from `P`. Explicit row-specific
 #' seeds make results reproducible across worker counts.
 #'
-#' @inheritParams network_generators
 #' @param P Dense or sparse edge-probability matrix.
 #' @param n Optional network size inferred from `P` when omitted.
 #' @param directed Whether to sample directed edges independently.
+#' @param representation Whether to return a sparse or dense adjacency matrix.
+#' @param self_loops Whether diagonal edges may be sampled.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param ncores Positive worker count.
+#' @param validate_inputs Whether to validate `P` before sampling.
 #' @return A base matrix or sparse `dgCMatrix`, according to `representation`.
+#' @examples
+#' P <- matrix(0.03, 200, 200)
+#' diag(P) <- 0
+#' A <- generate_adjacency(P, seed = 3, ncores = 1)
+#' dim(A)
 #' @seealso [generate_er()], [generate_rdpg()], [generate_sbm()]
 #' @rdname generate_adjacency
 #' @export
@@ -832,10 +896,14 @@ generate_adjacency <- function(
 #' Generates a dense or sparse Erdos-Renyi adjacency matrix and stores its
 #' generating parameters as lightweight metadata.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
+#' @param p Optional edge probability.
 #' @param average_degree Optional target expected average degree.
 #' @param directed Whether to generate a directed network.
+#' @param representation Whether to return a sparse or dense adjacency matrix.
+#' @param self_loops Whether diagonal edges may be generated.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param ncores Positive worker count.
 #' @return A generated adjacency matrix; see [get_generator_parameters()].
 #' @examples
 #' A <- generate_er(n = 200, average_degree = 5, seed = 1, ncores = 1)
@@ -904,12 +972,16 @@ generate_er <- function(
 #' Returns a finite `n`-by-`d` latent-position matrix, either supplied by the
 #' caller or sampled from `latent_distribution`.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
 #' @param d Positive latent dimension.
 #' @param Z Optional supplied latent-position matrix.
+#' @param latent_distribution Function used to sample latent coordinates.
+#' @param latent_args Optional named list passed to `latent_distribution`.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @return A numeric matrix with `n` rows and `d` columns.
+#' @examples
+#' Z <- generate_latent_positions(n = 200, d = 3, seed = 4)
+#' dim(Z)
 #' @seealso [generate_rdpg()], [generate_lsm_positions()]
 #' @rdname generate_latent_positions
 #' @export
@@ -976,10 +1048,25 @@ generate_latent_positions <- function(
 #' Generates a dense or sparse RDPG adjacency matrix. Undirected models use
 #' `Z`; directed models use `Z_left` and `Z_right`.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
 #' @param d Positive latent dimension.
+#' @param Z Optional undirected latent-position matrix.
+#' @param Z_left,Z_right Optional left and right directed latent-position
+#'   matrices.
+#' @param latent_distribution Function used to sample latent coordinates.
+#' @param latent_args Optional named list passed to `latent_distribution`.
+#' @param sparsity_multiplier Nonnegative multiplier applied to dot-product
+#'   probabilities.
+#' @param scale_P Whether to calibrate dot products before sampling.
+#' @param average_degree Optional target expected average degree.
+#' @param average_degree_method Scaling method, either `"naive"` or
+#'   `"calibrated"`.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
+#' @param representation Whether to return a sparse or dense adjacency matrix.
 #' @param directed Whether to generate a directed network.
+#' @param self_loops Whether diagonal edges may be generated.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param ncores Positive worker count.
 #' @return A generated adjacency matrix; see [get_generator_parameters()].
 #' @examples
 #' A <- generate_rdpg(n = 200, d = 3, seed = 2, ncores = 1)
@@ -1138,11 +1225,15 @@ generate_rdpg <- function(
 #'
 #' Produces community memberships for an SBM, DCBM, or latent-space model.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
 #' @param K Positive number of communities.
+#' @param g_true Optional supplied community-label vector.
+#' @param community_probabilities Optional length-`K` community probabilities.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @return An integer vector of length `n` with values from `1` through `K`.
+#' @examples
+#' g <- generate_community_labels(n = 200, K = 3, seed = 5)
+#' table(g)
 #' @seealso [generate_sbm()], [generate_dcbm()], [generate_lsm_positions()]
 #' @rdname generate_community_labels
 #' @export
@@ -1205,9 +1296,12 @@ generate_community_labels <- function(
 #'
 #' Draws the historical default degree parameters used by the DCBM generator.
 #'
-#' @inheritParams network_generators
 #' @param n Nonnegative number of degree parameters.
+#' @param shape_1,shape_2 Positive beta-distribution shape parameters.
 #' @return A nonnegative numeric vector of length `n`.
+#' @examples
+#' psi <- generate_inverse_beta_degree_parameters(200)
+#' length(psi)
 #' @seealso [generate_degree_parameters()], [generate_dcbm()]
 #' @rdname generate_inverse_beta_degree_parameters
 #' @export
@@ -1231,11 +1325,18 @@ generate_inverse_beta_degree_parameters <- function(
 #' Returns nonnegative node degree parameters, optionally normalized within
 #' communities.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
+#' @param psi Optional supplied nonnegative degree parameters.
+#' @param degree_distribution Function used to generate degree parameters.
+#' @param degree_args Optional named list passed to `degree_distribution`.
+#' @param degree_scale Community-wise degree-normalization method.
 #' @param g_true Optional community-label vector.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @return A nonnegative numeric vector of length `n`.
+#' @examples
+#' g <- generate_community_labels(n = 200, K = 3, seed = 6)
+#' psi <- generate_degree_parameters(n = 200, g_true = g, seed = 7)
+#' length(psi)
 #' @seealso [generate_inverse_beta_degree_parameters()], [generate_dcbm()]
 #' @rdname generate_degree_parameters
 #' @export
@@ -1319,12 +1420,27 @@ generate_degree_parameters <- function(
 #' `generate_sbm()` is its ordinary-block-model twin with unit degree effects.
 #' Both return dense or sparse adjacency matrices.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of nodes.
 #' @param K Positive number of communities.
+#' @param g_true Optional supplied community-label vector.
+#' @param community_probabilities Optional length-`K` community probabilities.
 #' @param P_block Optional `K`-by-`K` block-probability matrix.
+#' @param alpha,beta Within- and between-community probabilities used when
+#'   `P_block` is omitted.
+#' @param psi Optional supplied DCBM degree parameters.
+#' @param degree_distribution Function used to generate DCBM degree parameters.
+#' @param degree_args Optional named list passed to `degree_distribution`.
+#' @param degree_scale Community-wise degree-normalization method.
 #' @param sparsity_multiplier Nonnegative multiplier applied to probabilities.
+#' @param average_degree Optional target expected average degree.
+#' @param average_degree_method Scaling method, either `"naive"` or
+#'   `"calibrated"`.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
+#' @param representation Whether to return a sparse or dense adjacency matrix.
 #' @param directed Whether to generate a directed network.
+#' @param self_loops Whether diagonal edges may be generated.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param ncores Positive worker count.
 #' @return A generated adjacency matrix; see [get_generator_parameters()].
 #' @examples
 #' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
@@ -1539,9 +1655,13 @@ generate_sbm <- function(
 #'
 #' Draws standard-normal noise on a finite interval by inverse-CDF sampling.
 #'
-#' @inheritParams network_generators
 #' @param n Positive number of values to generate.
+#' @param lower_bound,upper_bound Finite truncation bounds with
+#'   `lower_bound < upper_bound`.
 #' @return A numeric vector of length `n`.
+#' @examples
+#' x <- generate_truncated_normal(200, lower_bound = -2, upper_bound = 2)
+#' range(x)
 #' @seealso [generate_lsm_positions()]
 #' @rdname generate_truncated_normal
 #' @export
@@ -1573,6 +1693,9 @@ generate_truncated_normal <- function(
 #'
 #' @param Z A finite numeric latent-position matrix.
 #' @return A centered and normalized matrix with the same dimensions as `Z`.
+#' @examples
+#' Z <- matrix(stats::rnorm(200 * 3), 200, 3)
+#' dim(normalize_lsm_positions(Z))
 #' @seealso [generate_lsm_positions()], [generate_lsm()]
 #' @rdname normalize_lsm_positions
 #' @export
@@ -1592,8 +1715,12 @@ normalize_lsm_positions <- function(Z) {
 #' Generates an `n`-by-`d` latent-position matrix from a finite Gaussian
 #' mixture with `K` communities.
 #'
-#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param d Positive latent dimension.
+#' @param K Positive number of communities.
 #' @param g_true Community-label vector of length `n`.
+#' @param mean_lower,mean_upper Finite bounds for community means.
+#' @param noise_lower,noise_upper Finite truncation bounds for latent noise.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @return A numeric matrix with `n` rows and `d` columns.
 #' @examples
@@ -1682,8 +1809,21 @@ generate_lsm_alpha <- function(n, alpha = NULL, seed = NULL) {
 #' Shifts an LSM logit matrix using the historical iterative method or calibrated
 #' bisection.
 #'
-#' @inheritParams network_generators
+#' @param theta Finite square latent-space logit matrix.
+#' @param average_degree Target expected average degree.
+#' @param average_degree_method Scaling method, either `"naive"` or
+#'   `"calibrated"`.
+#' @param self_loops Whether diagonal probabilities count toward degree.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
+#' @param naive_iterations Positive iteration count for historical scaling.
+#' @param tolerance Positive bisection convergence tolerance.
+#' @param max_iterations Positive maximum number of bisection iterations.
 #' @return A list containing the probability matrix `P` and `intercept_shift`.
+#' @examples
+#' Z <- matrix(stats::rnorm(200 * 3), 200, 3)
+#' theta <- -tcrossprod(Z)
+#' scaled <- scale_lsm_to_average_degree(theta, average_degree = 5)
+#' mean(rowSums(scaled$P))
 #' @seealso [generate_lsm()], [scale_to_average_degree()]
 #' @rdname scale_lsm_to_average_degree
 #' @export
@@ -1799,10 +1939,30 @@ scale_lsm_to_average_degree <- function(
 #' Generates a dense or sparse Hoff/Ma-style latent-space-model adjacency
 #' matrix from supplied or generated positions, memberships, and intercepts.
 #'
-#' @inheritParams network_generators
+#' @param n Positive number of nodes.
+#' @param d Positive latent dimension.
+#' @param K Positive number of communities.
+#' @param g_true Optional supplied community-label vector.
+#' @param community_probabilities Optional length-`K` community probabilities.
 #' @param alpha Optional scalar or node-specific intercepts.
+#' @param Z Optional undirected latent-position matrix.
+#' @param Z_left,Z_right Optional left and right directed latent-position
+#'   matrices.
+#' @param normalize_Z Whether to center and scale latent positions.
+#' @param distance_adjustment Whether to apply the historical distance scaling.
+#' @param mean_lower,mean_upper Finite bounds for generated community means.
+#' @param noise_lower,noise_upper Finite truncation bounds for generated latent
+#'   noise.
+#' @param average_degree Optional target expected average degree.
+#' @param average_degree_method Scaling method, either `"naive"` or
+#'   `"calibrated"`.
 #' @param naive_iterations Positive iteration count for historical scaling.
+#' @param lower_clip,upper_clip Finite probability clipping bounds.
+#' @param representation Whether to return a sparse or dense adjacency matrix.
 #' @param directed Whether to generate a directed network.
+#' @param self_loops Whether diagonal edges may be generated.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param ncores Positive worker count.
 #' @return A generated adjacency matrix; see [get_generator_parameters()].
 #' @examples
 #' A <- generate_lsm(n = 200, d = 3, K = 3, seed = 7, ncores = 1)

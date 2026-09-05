@@ -3,16 +3,37 @@
 # Package loading resolves helper order and registers the optional C++
 # accelerator for lsm_pgd().
 
-# Compute an adjacency spectral embedding (ASE).
-#
-# For an undirected A, use the d eigenvalues of largest magnitude and form
-# Z_hat = U |Lambda|^(1/2). The signed eigenvalues are retained so an optional
-# rank-d reconstruction uses U Lambda U^T rather than Z_hat Z_hat^T.
-#
-# For a directed A, use the rank-d SVD and return left/right embeddings
-# U D^(1/2) and V D^(1/2). If align_with is supplied, the left embedding is
-# aligned to it and the same orthogonal rotation is applied to the right
-# embedding, preserving their reconstructed matrix.
+#' Network embedding, clustering, estimation, and label alignment
+#'
+#' Spectral and latent-space embedders, SBM/DCBM probability estimators, and
+#' deterministic or exact label-alignment helpers.
+#'
+#' @name embedding_estimating
+NULL
+
+#' Compute an adjacency spectral embedding
+#'
+#' Embeds a dense or sparse adjacency matrix in `d` dimensions.
+#'
+#' @details For an undirected `A`, the embedding uses the `d` eigenvalues of
+#'   largest magnitude and forms \eqn{\hat Z = U |\Lambda|^{1/2}}. Signed
+#'   eigenvalues are retained so reconstruction uses
+#'   \eqn{U \Lambda U^T}. Directed input uses a rank-`d` SVD to produce left
+#'   and right embeddings. A supplied `align_with` rotates both embeddings
+#'   together, preserving their reconstructed matrix.
+#' @param A A finite square dense or sparse adjacency matrix.
+#' @param d Positive embedding dimension.
+#' @param directed Whether to treat `A` as directed.
+#' @param reconstruct Whether to return the rank-`d` matrix reconstruction.
+#' @param align_with Optional `nrow(A)`-by-`d` reference embedding used for
+#'   orthogonal Procrustes alignment.
+#' @param ram_check Whether to report a conservative RAM preflight estimate.
+#' @return An embedding object containing coordinates and decomposition details.
+#' @examples
+#' A <- generate_rdpg(n = 200, d = 3, seed = 8, ncores = 1)
+#' fit <- ase(A, d = 3)
+#' dim(fit$Z_hat)
+#' @seealso [spectral_cluster()], [generate_rdpg()], [netcrop_rdpg()]
 #' @rdname ase
 #' @export
 ase <- function(
@@ -290,13 +311,43 @@ ase <- function(
   result
 }
 
-# Cluster an undirected network through a spectral representation.
-#
-# If U is supplied, it is clustered directly and A (including its degree
-# information) is ignored. Otherwise asymmetric A is converted exactly as
-# A + t(A), following the package convention for undirected networks.
-# regularize_tau uses A_tau = A + tau * mean(deg) / n before either direct
-# decomposition or Laplacian construction.
+#' Cluster a network spectrally
+#'
+#' Clusters a dense or sparse network into `K` communities using a configurable
+#' spectral representation and clustering backend.
+#'
+#' @details If `U` is supplied, it is clustered directly and `A`, including its
+#'   degree information, is ignored. Otherwise asymmetric `A` is converted to
+#'   `A + t(A)`. Regularization uses
+#'   \eqn{A_\tau = A + \tau \operatorname{mean}(degree) / n} before direct
+#'   decomposition or Laplacian construction.
+#' @param A Optional finite square dense or sparse adjacency matrix. Supply
+#'   either `A` or `U`.
+#' @param U Optional finite matrix whose rows are clustered directly. Supply
+#'   either `U` or `A`.
+#' @param K Positive number of communities.
+#' @param laplacian Whether to cluster a graph-Laplacian representation.
+#' @param normalize_laplacian Whether a requested Laplacian is normalized.
+#' @param regularize_tau Nonnegative adjacency regularization parameter.
+#' @param handle_zero_degree_nodes Policy for zero-degree nodes: leave them in
+#'   the fit, assign random labels, or remove them during clustering.
+#' @param row_normalize Whether to normalize spectral-representation rows.
+#' @param spectral_method Whether to use an eigendecomposition or SVD.
+#' @param spectral_engine Spectral backend: `"RSpectra"`, `"irlba"`, or base R.
+#' @param spectral_options Named list of additional spectral-backend options.
+#' @param cluster_engine Clustering backend: `"clara"`, `"kmeans"`, or `"pam"`.
+#' @param cluster_options Named list of additional clustering-backend options.
+#' @param ram_check Whether to report a conservative RAM preflight estimate.
+#' @param validate_inputs Whether to validate inputs; only audited internal
+#'   callers should disable this.
+#' @return A fitted spectral-clustering object with labels and diagnostics.
+#' @examples
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
+#'                   seed = 9, ncores = 1)
+#' fit <- spectral_cluster(A, K = 3, spectral_engine = "base",
+#'                         cluster_engine = "kmeans")
+#' table(fit$g_hat)
+#' @seealso [ase()], [estimate_sbm()], [sonnet()]
 #' @rdname spectral_cluster
 #' @export
 spectral_cluster <- function(
@@ -813,12 +864,31 @@ spectral_cluster <- function(
   )
 }
 
-# Fit an undirected logistic latent-space model by projected gradient ascent.
-#
-# Initialization uses USVT, a stable logit transform, the correct solution of
-# (n I + 1 1^T) alpha = rowSums(theta), and double-centering without forming an
-# n-by-n centering matrix. The diagonal is excluded from objective and gradient.
-# Optional direct initial values may replace either spectral initializer.
+#' Fit a latent-space model by projected gradient descent
+#'
+#' Estimates latent positions and intercepts for a dense or sparse network.
+#'
+#' @details Initialization uses USVT, a stable logit transform, the solution of
+#'   \eqn{(n I + 1 1^T)\alpha = \operatorname{rowSums}(\theta)}, and
+#'   double-centering without constructing a dense centering matrix. The
+#'   diagonal is excluded from the objective and gradient. Direct initial
+#'   values may replace either spectral initializer.
+#' @param A A finite square dense or sparse adjacency matrix.
+#' @param d Positive latent dimension.
+#' @param step_size Positive projected-gradient step size.
+#' @param niter Positive number of projected-gradient iterations.
+#' @param trace Whether to print optimizer progress.
+#' @param Z_init Optional `nrow(A)`-by-`d` initial latent-position matrix.
+#' @param alpha_init Optional scalar or length-`nrow(A)` initial intercept.
+#' @param epsilon Positive probability-clipping constant.
+#' @param use_cpp Whether to use the compiled optimizer when available.
+#' @param ram_check Whether to report a conservative RAM preflight estimate.
+#' @return A fitted latent-space-model object.
+#' @examples
+#' A <- generate_lsm(n = 200, d = 3, K = 3, seed = 10, ncores = 1)
+#' fit <- lsm_pgd(A, d = 3, niter = 2, use_cpp = FALSE)
+#' dim(fit$Z_hat)
+#' @seealso [generate_lsm()], [netcrop_lsm()]
 #' @rdname lsm_pgd
 #' @export
 lsm_pgd <- function(

@@ -8,6 +8,32 @@
 # exceptions to CONVENTIONS.md. Only selectable loss names and package
 # namespace integration were adapted during this conversion.
 
+#' Edge cross-validation stability selection
+#'
+#' Selects a block-model community count or RDPG dimension by repeated edge
+#' sampling. netOP provides self-contained wrappers around an ECV
+#' implementation derived from the CRAN package `randnet`; `randnet` is not a
+#' package dependency and its ECV-specific helpers remain internal.
+#'
+#' @references
+#' Li, T., Levina, E., and Zhu, J. (2020). Network cross-validation by edge
+#' sampling. *Biometrika*, 107(2), 257-276. \doi{10.1093/biomet/asaa006}
+#' @name ecv_stability
+NULL
+
+#' Node cross-validation stability selection
+#'
+#' Repeated node cross-validation for selecting the number of block-model
+#' communities. This is the netOP authors' implementation of Chen and Lei
+#' (2018), with numerical-stability checks and explicit failure handling.
+#'
+#' @references
+#' Chen, K. and Lei, J. (2018). Network Cross-Validation for Determining the
+#' Number of Communities in Network Data. *Journal of the American Statistical
+#' Association*, 113(521), 241-251. \doi{10.1080/01621459.2016.1246365}
+#' @name ncv_stability
+NULL
+
 holdout.evaluation.fast.all <- function(holdout.index, A, max.K, tau = 0,
                                         dc.est = 2, p.sample = 1,
                                         loss = c('sse', 'bin_dev', 'auc_as_loss')) {
@@ -319,6 +345,47 @@ ECV.BM <- function (A, max.K, cv = 3, holdout.p = 0.1, tau = 0, dc.est = 2,
   return(output)
 }
 
+#' Select block-model size with edge cross-validation
+#'
+#' Runs repeated edge-sampling cross-validation over every community count from
+#' one through `max_K` using the preserved ECV block-model implementation.
+#'
+#' @details
+#' The wrapper validates binary undirected loop-free input, candidate and
+#' sampling feasibility, dependencies, seeds, workers, and losses. Repetitions
+#' run through [uni_mclapply()] while folds within each repetition remain
+#' sequential. Raw ECV results are audited and converted to the shared tidy
+#' loss schema; failed repetitions either stop or are explicitly omitted.
+#'
+#' @param A Binary, symmetric, loop-free adjacency matrix.
+#' @param max_K Maximum candidate community count; candidates are `1:max_K`.
+#' @param train_proportion Proportion of dyads retained for training.
+#' @param cv Positive number of edge-sampling folds.
+#' @param nrep Positive number of repeated ECV runs.
+#' @param tau Nonnegative block-model regularization value.
+#' @param losses Canonical loss names to evaluate.
+#' @param ncores Positive outer worker count; folds run sequentially.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param failure_handling Stop or omit failed repetitions.
+#' @param retain_intermediates Retain all or minimal legacy results.
+#' @return A `netcrop_blockmodel` object with `algorithm = "ECV"`, tidy losses,
+#'   selections, candidate metadata, realized seeds, failures, worker counts,
+#'   timing, RAM diagnostics, and optional raw output.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 6, ncores = 1)
+#' ecv_stability_blockmodel(A, max_K = 5, cv = 2, nrep = 1,
+#'                          ncores = 1, seed = 7, verbose = FALSE)
+#' }
+#' @references
+#' Li, T., Levina, E., and Zhu, J. (2020). Network cross-validation by edge
+#' sampling. *Biometrika*, 107(2), 257-276. \doi{10.1093/biomet/asaa006}
+#' @seealso [ecv_stability_rdpg()], [ncv_stability_blockmodel()],
+#'   [netcrop_blockmodel()]
 # Run repeated ECV block-model selection with validated inputs and stable output.
 #' @rdname ecv_stability_blockmodel
 #' @export
@@ -1214,6 +1281,46 @@ ncv_bm <- function(
   )
 }
 
+#' Select block-model size with node cross-validation
+#'
+#' Repeats node cross-validation over every community count from one through
+#' `max_K` for both SBM and DCBM candidates.
+#'
+#' @details
+#' Each repetition partitions nodes into folds, fits candidates on rectangular
+#' training blocks, and evaluates held-out dyads. Repetitions are parallelized,
+#' fold stages remain sequential, and probabilities are clipped consistently
+#' for logarithmic losses. Failed repetitions can stop or be omitted.
+#'
+#' @param A Binary, symmetric, loop-free adjacency matrix.
+#' @param max_K Maximum community count; candidates are `1:max_K`.
+#' @param cv,nrep Positive numbers of folds and repetitions.
+#' @param dc_est DCBM estimator, either `"spectral"` or `"plugin"`.
+#' @param tau Nonnegative spectral regularization value.
+#' @param use_laplacian Use Laplacian spectral representations.
+#' @param losses Canonical loss names to evaluate.
+#' @param ncores Positive outer worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param failure_handling Stop or omit failed repetitions.
+#' @param retain_intermediates Retain all or minimal repetition output.
+#' @return A `netcrop_blockmodel` object with `algorithm = "NCV"`, tidy fold
+#'   and repetition losses, selections, fold metadata, realized seeds,
+#'   failures, worker counts, timing, and optional raw output.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.55, beta = 0.08,
+#'                   seed = 24, ncores = 1)
+#' ncv_stability_blockmodel(A, max_K = 5, cv = 2, nrep = 1,
+#'                          ncores = 1, seed = 26, verbose = FALSE)
+#' }
+#' @references
+#' Chen, K. and Lei, J. (2018). Network Cross-Validation for Determining the
+#' Number of Communities in Network Data. *Journal of the American Statistical
+#' Association*, 113(521), 241-251. \doi{10.1080/01621459.2016.1246365}
+#' @seealso [ecv_stability_blockmodel()], [netcrop_blockmodel()]
 # Stabilize NCV block-model selection across repeated node partitions.
 #' @rdname ncv_stability_blockmodel
 #' @export
@@ -1670,6 +1777,44 @@ ecv_rdpg_legacy_environment <- local({
   legacy_environment
 })
 
+#' Select RDPG dimension with edge cross-validation
+#'
+#' Runs repeated edge-sampling cross-validation over every symmetric-RDPG
+#' dimension from one through `max_d`.
+#'
+#' @details
+#' The preserved RDPG ECV reconstruction routines run inside an isolated
+#' internal environment. The wrapper validates graph and holdout feasibility,
+#' supplies namespace-safe dependencies, audits all results, converts them to
+#' tidy losses, and retains independently realized repetition seeds.
+#'
+#' @param A Binary, symmetric, loop-free adjacency matrix.
+#' @param max_d Maximum candidate dimension; candidates are `1:max_d`.
+#' @param cv Positive number of edge-sampling folds.
+#' @param nrep Positive number of repeated ECV runs.
+#' @param train_proportion Proportion of dyads retained for training.
+#' @param losses Canonical loss names to evaluate.
+#' @param ncores Positive outer worker count; folds run sequentially.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param failure_handling Stop or omit failed repetitions.
+#' @param retain_intermediates Retain all or minimal legacy results.
+#' @return A `netcrop_rdpg` object with `algorithm = "ECV"`, tidy loss curves,
+#'   selections, holdout metadata, realized seeds, failures, worker counts,
+#'   timings, RAM diagnostics, and optional legacy output.
+#' @examples
+#' \donttest{
+#' A <- as.matrix(generate_rdpg(n = 200, d = 3, average_degree = 8,
+#'                              seed = 33, ncores = 1))
+#' ecv_stability_rdpg(A, max_d = 5, cv = 2, nrep = 1,
+#'                    ncores = 1, seed = 34, verbose = FALSE)
+#' }
+#' @references
+#' Li, T., Levina, E., and Zhu, J. (2020). Network cross-validation by edge
+#' sampling. *Biometrika*, 107(2), 257-276. \doi{10.1093/biomet/asaa006}
+#' @seealso [ecv_stability_blockmodel()], [netcrop_rdpg()]
 # Stabilize ECV dimension selection for a symmetric RDPG.
 #' @rdname ecv_stability_rdpg
 #' @export
@@ -2222,6 +2367,41 @@ plot_rdpg_comparison <- function(..., loss_scale = c("relative", "raw")) {
     ggplot2::theme(legend.position = "bottom")
 }
 
+#' Tune a degree-regularized spectral model
+#'
+#' Selects a spectral regularizer using the DKEST eigenspectral-ratio
+#' criterion.
+#'
+#' @details
+#' Each candidate regularizes the observed matrix, optionally constructs its
+#' normalized Laplacian, clusters the fixed-`K` embedding, estimates SBM or
+#' DCBM probabilities, and computes the ratio between selected residual and
+#' fitted eigenvalues. Candidate failures are audited explicitly.
+#'
+#' @param A Finite symmetric, loop-free adjacency matrix.
+#' @param K Fixed positive number of communities.
+#' @param tau_candidates Unique finite nonnegative regularization candidates.
+#' @param use_laplacian Use a normalized graph Laplacian.
+#' @param use_dcbm Fit a degree-corrected rather than ordinary block model.
+#' @param dcbm_est_method DCBM estimator, either `"plugin"` or `"spectral"`.
+#' @param ncores Positive worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param failure_handling Stop or omit failed candidates.
+#' @param retain_intermediates Retain all or minimal candidate fits.
+#' @return A `netcrop_regularizer` object containing `tau_hat`, the selected DK
+#'   statistic, per-candidate numerator, denominator, and ratio, diagnostics,
+#'   seeds, worker counts, timing, RAM information, and optional raw fits.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 35, ncores = 1)
+#' dkest_tune_regularizer(A, K = 3, tau_candidates = c(0, 0.1),
+#'                        ncores = 1, seed = 36, verbose = FALSE)
+#' }
+#' @seealso [netcrop_tune_regularizer()], [mult_reg_spectral_cluster()]
 # Select a spectral regularization parameter using the DK statistic.
 #' @rdname dkest_tune_regularizer
 #' @export
@@ -2684,6 +2864,47 @@ dkest_tune_regularizer <- function(
   out
 }
 
+#' Fit spectral clusterings over multiple regularizers
+#'
+#' Fits spectral clustering across a requested regularization grid for one
+#' network or a matched list of networks.
+#'
+#' @details
+#' Network-by-candidate tasks are parallelized. The same realized seed is used
+#' across candidates within a network so stochastic clustering comparisons are
+#' fair. Results can retain complete fitted objects or labels only.
+#'
+#' @param A One adjacency matrix or a nonempty list of equal-sized matrices.
+#' @param K Fixed positive number of communities.
+#' @param tau_candidates Unique finite nonnegative regularization candidates.
+#' @param laplacian Convert adjacency matrices to graph Laplacians.
+#' @param normalize_laplacian Use symmetric normalized Laplacians.
+#' @param handle_zero_degree_nodes Zero-degree node policy.
+#' @param row_normalize Normalize embedding rows before clustering.
+#' @param spectral_method Use an eigen- or singular-vector representation.
+#' @param spectral_engine Decomposition backend.
+#' @param spectral_options Named decomposition options.
+#' @param cluster_engine Clustering backend.
+#' @param cluster_options Named clustering options.
+#' @param ncores Positive task-worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param failure_handling Stop or omit failed candidate fits.
+#' @param retain_fits Retain fitted `spectral_cluster` objects.
+#' @return A `mult_reg_clustering` object containing labels and optional fits by
+#'   network and candidate, resolved parameters, task metadata, failures,
+#'   seeds, workers, timing, and RAM diagnostics.
+#' @examples
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 37, ncores = 1)
+#' fits <- mult_reg_spectral_cluster(
+#'   A, K = 3, tau_candidates = c(0, 0.1), ncores = 1,
+#'   seed = 38, verbose = FALSE, spectral_engine = "base",
+#'   cluster_engine = "kmeans"
+#' )
+#' @seealso [dkest_tune_regularizer()], [netcrop_tune_regularizer()]
 # Fit spectral clustering over multiple regularization values and networks.
 #' @rdname mult_reg_spectral_cluster
 #' @export
@@ -3015,6 +3236,49 @@ mult_reg_spectral_cluster <- function(
   result
 }
 
+#' Fit SONNET over multiple regularizers
+#'
+#' Fits SONNET across a requested regularization grid for one network or a
+#' matched list.
+#'
+#' @details
+#' Candidate fits run sequentially so `ncores` remains available to SONNET's
+#' internal subnetwork computations. The same realized seed is reused across
+#' regularization candidates within each network.
+#'
+#' @param A One adjacency matrix or a nonempty list of equal-sized matrices.
+#' @param K Fixed positive number of communities.
+#' @param tau_candidates Unique finite nonnegative regularization candidates.
+#' @param num_subnetworks Number of overlapping subnetworks; `NULL` selects it
+#'   automatically.
+#' @param overlap_size Number of overlap nodes; `NULL` selects it automatically.
+#' @param extra_nrep Number of additional SONNET repetitions.
+#' @param ncores Positive SONNET worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param matching_method Label-alignment method.
+#' @param confirm_large Confirm potentially factorial brute-force matching.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @param share_overlap Reuse one overlap across repetitions.
+#' @param parameter_select_options Named automatic-partition options.
+#' @param failure_handling Stop or omit failed candidate fits.
+#' @param retain_fits Retain fitted `sonnet` objects.
+#' @param ... Named spectral-clustering arguments forwarded to [sonnet()].
+#' @return A `mult_reg_clustering` object containing SONNET labels and optional
+#'   fits by network and regularizer, parameters, tasks, failures, seeds, and
+#'   timing.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 39, ncores = 1)
+#' mult_reg_sonnet(
+#'   A, K = 3, tau_candidates = c(0, 0.1),
+#'   num_subnetworks = 2, overlap_size = 20, ncores = 1,
+#'   seed = 40, verbose = FALSE, spectral_engine = "base"
+#' )
+#' }
+#' @seealso [sonnet()], [mult_reg_spectral_cluster()]
 # Fit SONNET over multiple regularization values and networks.
 #' @rdname mult_reg_sonnet
 #' @export
@@ -3296,6 +3560,51 @@ mult_reg_sonnet <- function(
   result
 }
 
+#' Compare clustering methods with known labels
+#'
+#' Evaluates SONNET, spectral clustering, or both against known community
+#' labels over candidate regularizers.
+#'
+#' @details
+#' Optional NETCROP and DKEST results add their selected regularizers to the
+#' comparison, including off-grid values. Accuracy is one minus the validated
+#' label-matching mismatch rate; multiple networks are summarized with means
+#' and standard deviations.
+#'
+#' @param A One adjacency matrix or a list matching `g_true`.
+#' @param g_true Ground-truth labels or a list matching `A`.
+#' @param tau_candidates Unique finite nonnegative regularization candidates.
+#' @param K Optional fixed number of communities; inferred from `g_true` when
+#'   omitted.
+#' @param netcrop_outcomes,dkest_outcomes Optional matching tuner results.
+#' @param include_netcrop_mean,include_netcrop_mode Include NETCROP repetition
+#'   summaries in addition to its first repetition.
+#' @param losses Optional NETCROP loss names to include.
+#' @param engines Fit `"sonnet"`, `"spectral_cluster"`, or both.
+#' @param matching_method Label-alignment method used for accuracy.
+#' @param confirm_large Confirm potentially factorial brute-force matching.
+#' @param sonnet_options,spectral_cluster_options Named fitter option lists.
+#' @param ncores Positive worker count.
+#' @param seed Optional nonnegative reproducibility seed.
+#' @param verbose Print progress messages.
+#' @param force_windows Use the Windows-compatible parallel backend.
+#' @param ram_check Report conservative RAM demand.
+#' @return Invisibly returns the rendered `ggplot`. Raw accuracy data,
+#'   aggregated plotting data, effective fit metadata, and diagnostics are
+#'   attached as attributes.
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 41, ncores = 1)
+#' truth <- get_generator_parameters(A)$g_true
+#' oracle_plotter(
+#'   A, g_true = truth, tau_candidates = c(0, 0.1), K = 3,
+#'   engines = "spectral_cluster", ncores = 1, seed = 42,
+#'   verbose = FALSE,
+#'   spectral_cluster_options = list(spectral_engine = "base")
+#' )
+#' }
+#' @seealso [spectral_cluster()], [sonnet()]
 # Plot oracle clustering accuracy and optional regularizer selections.
 #' @rdname oracle_plotter
 #' @export

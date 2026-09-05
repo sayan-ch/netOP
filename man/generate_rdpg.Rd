@@ -30,23 +30,36 @@ generate_rdpg(
 
 \item{d}{Positive latent dimension.}
 
-\item{Z, Z_left, Z_right}{Latent-position matrices.}
+\item{Z}{Optional undirected latent-position matrix.}
 
-\item{latent_distribution, latent_args}{Position distribution and named arguments.}
+\item{Z_left, Z_right}{Optional left and right directed latent-position
+matrices.}
 
-\item{sparsity_multiplier, scale_P}{Probability sparsity and scaling controls.}
+\item{latent_distribution}{Function used to sample latent coordinates.}
 
-\item{average_degree, average_degree_method}{Expected-degree target and calibration method.}
+\item{latent_args}{Optional named list passed to \code{latent_distribution}.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{sparsity_multiplier}{Nonnegative multiplier applied to dot-product
+probabilities.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{scale_P}{Whether to calibrate dot products before sampling.}
+
+\item{average_degree}{Optional target expected average degree.}
+
+\item{average_degree_method}{Scaling method, either \code{"naive"} or
+\code{"calibrated"}.}
+
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
+
+\item{representation}{Whether to return a sparse or dense adjacency matrix.}
 
 \item{directed}{Whether to generate a directed network.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal edges may be generated.}
 
-\item{seed, ncores}{Reproducibility seed and worker count.}
+\item{seed}{Optional nonnegative reproducibility seed.}
+
+\item{ncores}{Positive worker count.}
 }
 \value{
 A generated adjacency matrix; see \code{\link[=get_generator_parameters]{get_generator_parameters()}}.

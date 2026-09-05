@@ -17,11 +17,17 @@ generate_lsm_positions(
 )
 }
 \arguments{
-\item{n, d, K}{Numbers of nodes, latent dimensions, and communities.}
+\item{n}{Positive number of nodes.}
+
+\item{d}{Positive latent dimension.}
+
+\item{K}{Positive number of communities.}
 
 \item{g_true}{Community-label vector of length \code{n}.}
 
-\item{mean_lower, mean_upper, noise_lower, noise_upper}{Latent-mixture bounds.}
+\item{mean_lower, mean_upper}{Finite bounds for community means.}
+
+\item{noise_lower, noise_upper}{Finite truncation bounds for latent noise.}
 
 \item{seed}{Optional nonnegative reproducibility seed.}
 }

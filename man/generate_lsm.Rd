@@ -33,31 +33,50 @@ generate_lsm(
 )
 }
 \arguments{
-\item{n, d, K}{Numbers of nodes, latent dimensions, and communities.}
+\item{n}{Positive number of nodes.}
 
-\item{g_true, community_probabilities}{Labels or community proportions.}
+\item{d}{Positive latent dimension.}
+
+\item{K}{Positive number of communities.}
+
+\item{g_true}{Optional supplied community-label vector.}
+
+\item{community_probabilities}{Optional length-\code{K} community probabilities.}
 
 \item{alpha}{Optional scalar or node-specific intercepts.}
 
-\item{Z, Z_left, Z_right}{Latent-position matrices.}
+\item{Z}{Optional undirected latent-position matrix.}
 
-\item{normalize_Z, distance_adjustment}{Latent-space normalization controls.}
+\item{Z_left, Z_right}{Optional left and right directed latent-position
+matrices.}
 
-\item{mean_lower, mean_upper, noise_lower, noise_upper}{Latent-mixture bounds.}
+\item{normalize_Z}{Whether to center and scale latent positions.}
 
-\item{average_degree, average_degree_method}{Expected-degree target and calibration method.}
+\item{distance_adjustment}{Whether to apply the historical distance scaling.}
+
+\item{mean_lower, mean_upper}{Finite bounds for generated community means.}
+
+\item{noise_lower, noise_upper}{Finite truncation bounds for generated latent
+noise.}
+
+\item{average_degree}{Optional target expected average degree.}
+
+\item{average_degree_method}{Scaling method, either \code{"naive"} or
+\code{"calibrated"}.}
 
 \item{naive_iterations}{Positive iteration count for historical scaling.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{representation}{Whether to return a sparse or dense adjacency matrix.}
 
 \item{directed}{Whether to generate a directed network.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal edges may be generated.}
 
-\item{seed, ncores}{Reproducibility seed and worker count.}
+\item{seed}{Optional nonnegative reproducibility seed.}
+
+\item{ncores}{Positive worker count.}
 }
 \value{
 A generated adjacency matrix; see \code{\link[=get_generator_parameters]{get_generator_parameters()}}.

@@ -27,7 +27,25 @@ validate_adjacency <- function(A) {
 }
 
 # Build adjacency-list neighbors for the pure-R graph algorithms.
-#' @rdname adjacency_neighbors
+#' Find adjacent nodes
+#'
+#' Builds adjacency lists without densifying sparse inputs. Nonzero finite
+#' entries represent edges. `adjacency_neighbors()` returns node indices;
+#' `adjacency_weighted_neighbors()` also returns edge weights. For undirected
+#' reciprocal weighted edges, the smaller nonzero weight is used.
+#' @param A A finite square dense or sparse adjacency matrix.
+#' @param directed Preserve edge direction; otherwise an edge in either
+#'   direction connects both nodes.
+#' @param self_loops Include or ignore diagonal edges.
+#' @return `adjacency_neighbors()` returns one integer neighbor vector per
+#'   node. `adjacency_weighted_neighbors()` returns parallel `nodes` and
+#'   `weights` lists.
+#' @examples
+#' A <- matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 0), 3, 3)
+#' adjacency_neighbors(A)
+#' adjacency_weighted_neighbors(A)
+#' @seealso [connected_components()], [shortest_path_distances()]
+#' @name adjacency_neighbors
 #' @export
 adjacency_neighbors <- function(
     A,
@@ -88,7 +106,26 @@ adjacency_neighbors <- function(
 # Components are undirected/weak: an edge in either direction connects nodes.
 # Edge weights do not affect membership. Components are returned in discovery
 # order, and nodes within each component follow breadth-first search order.
-#' @rdname connected_components
+#' Find connected components
+#'
+#' Finds weak/undirected components: an edge in either direction connects two
+#' nodes, and weights do not affect membership. Components and their nodes are
+#' returned in breadth-first discovery order. `largest_connected_component()`
+#' selects the first largest component and extracts its induced matrix.
+#' @param A A finite square dense or sparse adjacency matrix.
+#' @param self_loops Include or ignore diagonal edges.
+#' @param use_cpp Try a registered compiled implementation before the R
+#'   implementation.
+#' @param sort_nodes Sort selected indices in `largest_connected_component()`.
+#' @return `connected_components()` returns a named list of one-based node
+#'   vectors. `largest_connected_component()` returns `nodes`, `size`, and the
+#'   induced `submatrix`.
+#' @examples
+#' A <- matrix(c(0, 1, 0, 1, 0, 0, 0, 0, 0), 3, 3)
+#' connected_components(A, use_cpp = FALSE)
+#' largest_connected_component(A, use_cpp = FALSE)
+#' @seealso [adjacency_neighbors()], [shortest_path_distances()]
+#' @name connected_components
 #' @export
 connected_components <- function(
     A,
@@ -318,7 +355,25 @@ adjacency_weighted_neighbors <- function(
 # direction is traversable in both directions. If reciprocal edge weights
 # differ, the smaller nonzero weight is used. Weighted paths require
 # nonnegative weights; zero denotes absence of an edge.
-#' @rdname shortest_path_distances
+#' Compute shortest-path distances
+#'
+#' Computes all-pairs shortest-path distances without requiring igraph. Rows
+#' are sources, columns are destinations, diagonal entries are zero, and
+#' unreachable pairs are `Inf`. Undirected weighted paths use the smaller
+#' nonzero weight when reciprocal weights differ.
+#' @param A A finite square dense or sparse adjacency matrix.
+#' @param directed Preserve edge direction.
+#' @param weighted Treat nonzero entries as nonnegative path lengths rather
+#'   than unit-length edges.
+#' @param self_loops Include or ignore diagonal edges.
+#' @param use_cpp Try a registered compiled implementation before the R
+#'   implementation.
+#' @return A numeric all-pairs distance matrix.
+#' @examples
+#' A <- matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 0), 3, 3)
+#' shortest_path_distances(A, use_cpp = FALSE)
+#' @seealso [adjacency_neighbors()], [connected_components()]
+#' @name shortest_path_distances
 #' @export
 shortest_path_distances <- function(
     A,

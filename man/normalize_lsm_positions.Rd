@@ -15,6 +15,10 @@ A centered and normalized matrix with the same dimensions as \code{Z}.
 \description{
 Centers and scales a latent-position matrix using the LSM convention.
 }
+\examples{
+Z <- matrix(stats::rnorm(200 * 3), 200, 3)
+dim(normalize_lsm_positions(Z))
+}
 \seealso{
 \code{\link[=generate_lsm_positions]{generate_lsm_positions()}}, \code{\link[=generate_lsm]{generate_lsm()}}
 }

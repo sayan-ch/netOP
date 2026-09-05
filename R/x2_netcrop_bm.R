@@ -5,6 +5,78 @@
 # non-overlap pieces. Package loading resolves all internal helpers.
 
 # Select an SBM or DCBM and number of communities by overlapping-subnetwork CV.
+#' Select a block model with NETCROP
+#'
+#' Selects the number of communities and either the stochastic block model
+#' (SBM), degree-corrected block model (DCBM), or both by overlapping-subnetwork
+#' cross-validation. The procedure obtains spectral labels on each subnetwork,
+#' estimates block-model parameters, aligns labels through the common overlap,
+#' and evaluates predictions between every pair of non-overlap pieces.
+#'
+#' @param A Finite square symmetric binary adjacency matrix with zero diagonal,
+#'   including a supported sparse `Matrix` object.
+#' @param K_candidates Non-empty vector of positive integer community counts;
+#'   duplicates are discarded. Conventionally this is `1:5`.
+#' @param num_subnetworks Optional integer number of subnetworks, at least 2. If
+#'   it or `overlap_size` is `NULL`, missing values are selected with
+#'   [netcrop_param_select()].
+#' @param overlap_size Optional positive integer overlap size. It must leave
+#'   enough non-overlap nodes for the requested subnetworks and candidates.
+#' @param nrep Positive integer number of independent NETCROP repetitions.
+#' @param losses Character vector naming prediction-loss functions available in
+#'   the calling environment, such as `"sse"`.
+#' @param model_candidates Character vector selecting `"SBM"`, `"DCBM"`, or
+#'   both candidate model families.
+#' @param sbm_est_options,dcbm_est_options Named lists of additional arguments
+#'   for the corresponding block-model estimators.
+#' @param matching_method Label-alignment method: `"greedy"`, `"hungarian"`, or
+#'   `"brute_force"`.
+#' @param confirm_large Optional logical passed to label matching to confirm an
+#'   unusually large brute-force matching problem.
+#' @param ncores Positive integer worker count used across decomposition,
+#'   estimation, alignment, and loss tasks.
+#' @param seed Optional nonnegative integer-like reproducibility seed.
+#' @param verbose Whether to print progress messages.
+#' @param force_windows Whether to force the Windows-compatible parallel
+#'   backend, including for backend testing on other platforms.
+#' @param ram_check Whether to run RAM preflight checks before major operations.
+#' @param parameter_select_options Named list of additional options passed to
+#'   [netcrop_param_select()] when partition parameters are selected
+#'   automatically.
+#' @param retain_intermediates Either `"all"` or `"minimal"`, controlling how
+#'   many fitted models and intermediate arrays are retained.
+#' @param laplacian Whether to convert subnetwork adjacency matrices to graph
+#'   Laplacians before spectral clustering.
+#' @param regularize_tau Nonnegative Laplacian regularization strength shared by
+#'   SBM and DCBM candidates.
+#' @param x A `netcrop_blockmodel` or `summary.netcrop_blockmodel` object. For
+#'   plotting, it is the first result to display or compare.
+#' @param object A fitted `netcrop_blockmodel` object to summarize.
+#' @param aggregate Whether a plot should aggregate loss curves across
+#'   repetitions. A `netcrop_blockmodel` object in this position instead starts
+#'   a comparison plot.
+#' @param ... Additional plotting arguments or further `netcrop_blockmodel`
+#'   objects for comparison; ignored by print and summary methods.
+#'
+#' @return `netcrop_blockmodel()` returns an object of class
+#'   `netcrop_blockmodel` containing candidate-wise cross-validation losses,
+#'   repetition and overall selections, split and alignment diagnostics,
+#'   retained intermediates, resource information, and timing.
+#'   `summary.netcrop_blockmodel()` returns a compact summary object; print
+#'   methods return their input invisibly, and the plot method returns a
+#'   `ggplot` object.
+#' @seealso [ecv_stability_blockmodel()], [ncv_stability_blockmodel()]
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 5, ncores = 1)
+#' fit <- netcrop_blockmodel(
+#'   A, K_candidates = 1:5, num_subnetworks = 2, overlap_size = 30,
+#'   model_candidates = "SBM", ncores = 1, seed = 6, verbose = FALSE
+#' )
+#' fit
+#' summary(fit)
+#' }
 #' @rdname netcrop_blockmodel
 #' @export
 netcrop_blockmodel <- function(
@@ -1528,6 +1600,7 @@ netcrop_blockmodel <- function(
 }
 
 # Print the selected block model for every requested loss.
+#' Print the selected block model for every requested loss.
 #' @rdname netcrop_blockmodel
 #' @export
 print.netcrop_blockmodel <- function(x, ...) {
@@ -1539,6 +1612,7 @@ print.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Summarize a NETCROP block-model fit.
+#' Summarize selections, split diagnostics, and timing.
 #' @rdname netcrop_blockmodel
 #' @export
 summary.netcrop_blockmodel <- function(object, ...) {
@@ -1623,6 +1697,7 @@ summary.netcrop_blockmodel <- function(object, ...) {
 }
 
 # Print a NETCROP block-model summary.
+#' Print a `summary.netcrop_blockmodel` object.
 #' @rdname netcrop_blockmodel
 #' @export
 print.summary.netcrop_blockmodel <- function(x, ...) {
@@ -1719,6 +1794,7 @@ print.summary.netcrop_blockmodel <- function(x, ...) {
 }
 
 # Plot CV loss curves, optionally aggregating across repetitions.
+#' Plot loss curves, optionally aggregating repetitions or comparing fits.
 #' @rdname netcrop_blockmodel
 #' @export
 plot.netcrop_blockmodel <- function(x, aggregate = TRUE, ...) {

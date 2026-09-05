@@ -7,7 +7,7 @@
 get_generator_parameters(A)
 }
 \arguments{
-\item{A}{A network matrix.}
+\item{A}{A network returned by a netOP generator.}
 }
 \value{
 A named list of generating parameters, or \code{NULL} when none is attached.
@@ -15,6 +15,10 @@ A named list of generating parameters, or \code{NULL} when none is attached.
 \description{
 Returns the compact generating parameters stored on a network produced by a
 netOP generator. Both dense and sparse generated matrices are supported.
+}
+\examples{
+A <- generate_er(n = 200, average_degree = 5, seed = 1, ncores = 1)
+get_generator_parameters(A)
 }
 \seealso{
 \code{\link[=generate_er]{generate_er()}}, \code{\link[=generate_sbm]{generate_sbm()}}, \code{\link[=generate_rdpg]{generate_rdpg()}}, \code{\link[=generate_lsm]{generate_lsm()}}

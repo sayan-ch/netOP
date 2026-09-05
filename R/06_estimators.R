@@ -3,22 +3,41 @@
 # Package loading resolves all internal helper relationships.
 # This file currently uses base R and supports dense or Matrix-package inputs.
 
-# Estimate the block-mean matrix of an SBM from a full or NCV adjacency matrix.
-#
-# With fold_nodes = NULL, A must be the full length(g)-by-length(g) matrix.
-# With fold_nodes supplied, A may be any of the common NCV layouts:
-#
-#   * full n-by-n A (the non-fold rows are selected internally),
-#   * non-fold rows by all columns,
-#   * all rows by fold columns, or
-#   * non-fold rows by fold columns.
-#
-# The rectangular estimator counts the dyads actually represented by A. It
-# therefore fixes the historical denominator based only on matrix dimensions.
-# For undirected networks, sufficient statistics from both available block
-# orientations are pooled before division. This also handles folds whose
-# community composition is unbalanced. Genuine self-pairs are removed using
-# inferred original node indices rather than by assuming a square matrix.
+#' Estimate stochastic block models
+#'
+#' Estimates SBM or DCBM parameters from dense, sparse, full, or supported NCV
+#' adjacency layouts.
+#'
+#' @details With `fold_nodes = NULL`, `A` is the full network. With fold nodes,
+#'   `A` may be the full matrix, non-fold rows by all columns, all rows by fold
+#'   columns, or non-fold rows by fold columns. The rectangular SBM estimator
+#'   counts represented dyads, pools both available block orientations for
+#'   undirected input, and identifies genuine self-pairs from original node
+#'   indices.
+#' @param A A finite full network matrix or supported rectangular NCV layout.
+#' @param g Positive integer community labels for the full network.
+#' @param K Positive number of communities.
+#' @param fold_nodes Optional original indices of held-out NCV nodes.
+#' @param directed Whether edges are directed. Used by `estimate_sbm()`.
+#' @param self_loops Whether diagonal edges are included. Used by
+#'   `estimate_sbm()`.
+#' @param validate_inputs Whether to validate inputs; only audited internal
+#'   callers should disable this.
+#' @param method DCBM estimator, either `"plugin"` or `"spectral"`.
+#' @param row_norm Optional supplied DCBM spectral row norms.
+#' @param psi_omit Number of trailing nodes omitted from returned DCBM degree
+#'   parameters.
+#' @param stabilizer Nonnegative plug-in denominator stabilizer.
+#' @param spectral_engine Spectral-decomposition backend.
+#' @param spectral_options Named options passed to the spectral decomposition.
+#' @return A fitted block-model object.
+#' @examples
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
+#'                   seed = 11, ncores = 1)
+#' g <- get_generator_parameters(A)$g_true
+#' B_hat <- estimate_sbm(A, g, K = 3)
+#' dim(B_hat)
+#' @seealso [estimate_sbm_P_hat()], [estimate_dcbm_P_hat()], [spectral_cluster()]
 #' @rdname estimate_blockmodel
 #' @export
 estimate_sbm <- function(
@@ -179,18 +198,14 @@ estimate_sbm <- function(
   B_hat
 }
 
-# Estimate degree-corrected SBM block and node parameters.
-#
-# method = "plugin" implements the degree/block-sum plug-in estimator and
-# retains the historical small block-sum stabilizer. method = "spectral" uses
-# row norms of a spectral representation. A full square network uses
-# eig_decomp(); rectangular NCV layouts use singular_decomp() so both row and
-# column representations are available.
-#
-# row_norm may be either a full length(g) vector, a vector corresponding to the
-# columns of A when all row nodes also occur among those columns, or a named
-# list with numeric components row and col matching nrow(A) and ncol(A).
-#' @rdname estimate_blockmodel
+#' @details `estimate_dcbm()` uses either the historical stabilized
+#'   degree/block-sum plug-in estimator or spectral row norms. Full square
+#'   networks use [eig_decomp()]; rectangular NCV layouts use
+#'   [singular_decomp()]. `row_norm` may be a full-network vector, a vector for
+#'   the columns of `A` when all row nodes occur there, or a named list with
+#'   `row` and `col` components matching the dimensions of `A`.
+#' @describeIn estimate_blockmodel Estimate degree-corrected block and node
+#'   parameters.
 #' @export
 estimate_dcbm <- function(
     A,
@@ -507,12 +522,36 @@ estimate_dcbm <- function(
   list(B_hat = B_hat, psi_hat = psi_hat)
 }
 
-# Estimate an SBM probability matrix directly.
-#
-# In NCV mode, return the fold-by-fold probability matrix implied by the block
-# estimate. Otherwise return probabilities for all nodes. The function name is
-# retained exactly as requested; the returned object follows the P_hat naming
-# convention.
+#' Reconstruct block-model probability matrices
+#'
+#' Reconstructs fitted SBM or DCBM edge probabilities.
+#'
+#' @details In NCV mode, `estimate_sbm_P_hat()` returns the fold-by-fold
+#'   probability matrix implied by the block estimate; otherwise it returns
+#'   probabilities for all nodes.
+#' @param A A finite full network matrix or supported rectangular NCV layout.
+#' @param g Positive integer community labels for the full network.
+#' @param K Positive number of communities.
+#' @param fold_nodes Optional original indices of held-out NCV nodes.
+#' @param directed Whether edges are directed. Used by `estimate_sbm_P_hat()`.
+#' @param method DCBM estimator, either `"plugin"` or `"spectral"`.
+#' @param row_norm Optional supplied DCBM spectral row norms.
+#' @param psi_omit Number of trailing nodes omitted from returned DCBM degree
+#'   parameters.
+#' @param stabilizer Nonnegative plug-in denominator stabilizer.
+#' @param spectral_engine Spectral-decomposition backend.
+#' @param spectral_options Named options passed to the spectral decomposition.
+#' @param self_loops Whether diagonal probabilities are retained.
+#' @param lower_clip,upper_clip Finite lower and upper bounds applied to fitted
+#'   probabilities.
+#' @return A fitted edge-probability matrix.
+#' @examples
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
+#'                   seed = 12, ncores = 1)
+#' g <- get_generator_parameters(A)$g_true
+#' P_hat <- estimate_sbm_P_hat(A, g, K = 3)
+#' dim(P_hat)
+#' @seealso [estimate_sbm()], [estimate_dcbm()], [clip_probabilities()]
 #' @rdname estimate_blockmodel_P_hat
 #' @export
 estimate_sbm_P_hat <- function(
@@ -564,12 +603,12 @@ estimate_sbm_P_hat <- function(
   P_hat
 }
 
-# Estimate a DCBM probability matrix directly.
-#
-# P_hat[i, j] = psi_hat[i] * psi_hat[j] * B_hat[g[i], g[j]]. In
-# NCV mode psi_hat is estimated for fold nodes, so the result is fold-by-fold.
-# With psi_omit, the result covers the retained trailing nodes.
-#' @rdname estimate_blockmodel_P_hat
+#' @details `estimate_dcbm_P_hat()` computes
+#'   \eqn{\hat P_{ij} = \hat\psi_i \hat\psi_j \hat B_{g_i,g_j}}. In NCV mode,
+#'   degree parameters are estimated for fold nodes and the result is
+#'   fold-by-fold. With `psi_omit`, the result covers retained trailing nodes.
+#' @describeIn estimate_blockmodel_P_hat Reconstruct degree-corrected block-model
+#'   probabilities.
 #' @export
 estimate_dcbm_P_hat <- function(
     A,
@@ -639,12 +678,28 @@ estimate_dcbm_P_hat <- function(
   P_hat
 }
 
-# Relabel communities to maximize agreement with a fixed labeling.
-#
-# The default uses inexpensive exact shortcuts for identical and two-community
-# inputs, followed by the historical greedy maximum-overlap assignment for
-# larger K. algorithm = "hungarian" uses a dependency-free O(K^3) assignment
-# implementation and therefore maximizes total agreement globally.
+#' Match community labels
+#'
+#' Aligns labels using greedy assignment or exact brute-force matching.
+#'
+#' @details The greedy function uses exact shortcuts for identical and
+#'   two-community inputs, followed by historical maximum-overlap assignment.
+#'   Its `"hungarian"` option uses a dependency-free cubic-time assignment and
+#'   maximizes total agreement globally.
+#' @param match_this Positive integer labels to relabel.
+#' @param standard Positive integer target labels of the same length.
+#' @param K Positive number of label classes.
+#' @param algorithm Assignment method for `label_match_greedy()`: historical
+#'   greedy matching or globally optimal Hungarian matching.
+#' @param return_mapping Whether to return mapping diagnostics with the labels.
+#' @param confirm_large For exact matching with more than eight classes,
+#'   explicitly confirm factorial computation in noninteractive use.
+#' @return A relabeled vector, optionally with mapping diagnostics.
+#' @examples
+#' labels <- c(2, 2, 3, 3, 1, 1)
+#' standard <- c(1, 1, 2, 2, 3, 3)
+#' label_match_greedy(labels, standard, K = 3)$matched_labels
+#' @seealso [spectral_cluster()], [sonnet()]
 #' @rdname label_match
 #' @export
 label_match_greedy <- function(
@@ -814,13 +869,11 @@ label_match_greedy <- function(
   )
 }
 
-# Relabel communities by checking every one of the K! permutations.
-#
-# Permutations are generated recursively and scored one at a time, avoiding a
-# K!-by-K permutation matrix. Runtime remains factorial. For K > 8, an
-# interactive call requires explicit confirmation; non-interactive callers
-# must opt in with confirm_large = TRUE.
-#' @rdname label_match
+#' @details `label_match_brute_force()` generates permutations recursively and
+#'   scores them one at a time. Runtime remains factorial. For `K > 8`, an
+#'   interactive call requires confirmation and noninteractive callers must set
+#'   `confirm_large = TRUE`.
+#' @describeIn label_match Match labels by enumerating every permutation.
 #' @export
 label_match_brute_force <- function(
     match_this,

@@ -20,7 +20,9 @@ generate_latent_positions(
 
 \item{Z}{Optional supplied latent-position matrix.}
 
-\item{latent_distribution, latent_args}{Position distribution and named arguments.}
+\item{latent_distribution}{Function used to sample latent coordinates.}
+
+\item{latent_args}{Optional named list passed to \code{latent_distribution}.}
 
 \item{seed}{Optional nonnegative reproducibility seed.}
 }
@@ -30,6 +32,10 @@ A numeric matrix with \code{n} rows and \code{d} columns.
 \description{
 Returns a finite \code{n}-by-\code{d} latent-position matrix, either supplied by the
 caller or sampled from \code{latent_distribution}.
+}
+\examples{
+Z <- generate_latent_positions(n = 200, d = 3, seed = 4)
+dim(Z)
 }
 \seealso{
 \code{\link[=generate_rdpg]{generate_rdpg()}}, \code{\link[=generate_lsm_positions]{generate_lsm_positions()}}

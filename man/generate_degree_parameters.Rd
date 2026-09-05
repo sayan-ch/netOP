@@ -17,7 +17,13 @@ generate_degree_parameters(
 \arguments{
 \item{n}{Positive number of nodes.}
 
-\item{psi, degree_distribution, degree_args, degree_scale}{Degree-correction controls.}
+\item{psi}{Optional supplied nonnegative degree parameters.}
+
+\item{degree_distribution}{Function used to generate degree parameters.}
+
+\item{degree_args}{Optional named list passed to \code{degree_distribution}.}
+
+\item{degree_scale}{Community-wise degree-normalization method.}
 
 \item{g_true}{Optional community-label vector.}
 
@@ -29,6 +35,11 @@ A nonnegative numeric vector of length \code{n}.
 \description{
 Returns nonnegative node degree parameters, optionally normalized within
 communities.
+}
+\examples{
+g <- generate_community_labels(n = 200, K = 3, seed = 6)
+psi <- generate_degree_parameters(n = 200, g_true = g, seed = 7)
+length(psi)
 }
 \seealso{
 \code{\link[=generate_inverse_beta_degree_parameters]{generate_inverse_beta_degree_parameters()}}, \code{\link[=generate_dcbm]{generate_dcbm()}}

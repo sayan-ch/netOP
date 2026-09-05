@@ -28,25 +28,33 @@ read_network(
 )
 }
 \arguments{
-\item{A}{A network matrix.}
+\item{A}{A finite square dense or sparse network matrix to write.}
 
-\item{file}{Edge-list path.}
+\item{file}{Edge-list file path.}
 
-\item{directed, weighted}{Direction and edge-weight controls.}
+\item{directed}{Optional direction indicator; inferred from metadata or
+symmetry when omitted.}
 
-\item{triangle}{Triangle written for an undirected network.}
+\item{weighted}{Optional weight indicator; inferred from edge values when
+omitted.}
 
-\item{format}{File format (\code{"auto"}, \code{"csv"}, or \code{"tsv"}).}
+\item{triangle}{For undirected output, which matrix triangle to write.}
 
-\item{include_header, has_header}{Header writing or reading controls.}
+\item{format}{Delimited format: \code{"auto"}, \code{"csv"}, or \code{"tsv"}.}
 
-\item{overwrite}{Permit \code{\link[=write_network]{write_network()}} to replace an existing file.}
+\item{include_header}{Whether \code{write_network()} writes column names.}
 
-\item{tolerance}{Numerical comparison or calibration tolerance.}
+\item{overwrite}{Whether \code{write_network()} may replace an existing file.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{tolerance}{Numerical tolerance used when checking symmetry and weights.}
 
-\item{n}{Optional network size, used when metadata cannot determine it.}
+\item{representation}{Whether \code{read_network()} returns a sparse or dense
+matrix.}
+
+\item{n}{Optional network size used by \code{read_network()} when metadata cannot
+determine it.}
+
+\item{has_header}{Whether an input edge list has a header row.}
 }
 \value{
 \code{write_network()} invisibly returns \code{file}; \code{read_network()} returns
@@ -60,6 +68,14 @@ direction, and weighting, including when isolated nodes are absent.
 \code{read_network()} reconstructs an edge list as a dense matrix or
 general sparse \code{dgCMatrix}. For undirected input, each off-diagonal edge
 must occur only once.
+}
+\examples{
+A <- generate_er(n = 200, average_degree = 5, seed = 2, ncores = 1)
+path <- tempfile(fileext = ".csv")
+write_network(A, path, format = "csv")
+A_roundtrip <- read_network(path, format = "csv")
+unlink(path)
+dim(A_roundtrip)
 }
 \seealso{
 \code{\link[=generate_adjacency]{generate_adjacency()}}

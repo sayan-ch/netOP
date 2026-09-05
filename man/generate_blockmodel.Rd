@@ -54,27 +54,41 @@ generate_sbm(
 
 \item{K}{Positive number of communities.}
 
-\item{g_true, community_probabilities}{Labels or community proportions.}
+\item{g_true}{Optional supplied community-label vector.}
+
+\item{community_probabilities}{Optional length-\code{K} community probabilities.}
 
 \item{P_block}{Optional \code{K}-by-\code{K} block-probability matrix.}
 
-\item{alpha, beta}{Block or latent-space intercept parameters.}
+\item{alpha, beta}{Within- and between-community probabilities used when
+\code{P_block} is omitted.}
 
-\item{psi, degree_distribution, degree_args, degree_scale}{Degree-correction controls.}
+\item{psi}{Optional supplied DCBM degree parameters.}
+
+\item{degree_distribution}{Function used to generate DCBM degree parameters.}
+
+\item{degree_args}{Optional named list passed to \code{degree_distribution}.}
+
+\item{degree_scale}{Community-wise degree-normalization method.}
 
 \item{sparsity_multiplier}{Nonnegative multiplier applied to probabilities.}
 
-\item{average_degree, average_degree_method}{Expected-degree target and calibration method.}
+\item{average_degree}{Optional target expected average degree.}
 
-\item{lower_clip, upper_clip}{Probability bounds.}
+\item{average_degree_method}{Scaling method, either \code{"naive"} or
+\code{"calibrated"}.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{lower_clip, upper_clip}{Finite probability clipping bounds.}
+
+\item{representation}{Whether to return a sparse or dense adjacency matrix.}
 
 \item{directed}{Whether to generate a directed network.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal edges may be generated.}
 
-\item{seed, ncores}{Reproducibility seed and worker count.}
+\item{seed}{Optional nonnegative reproducibility seed.}
+
+\item{ncores}{Positive worker count.}
 }
 \value{
 A generated adjacency matrix; see \code{\link[=get_generator_parameters]{get_generator_parameters()}}.

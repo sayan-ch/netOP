@@ -1024,6 +1024,39 @@
 }
 
 # Fit SONNET with one overlap shared by all repetitions.
+#' Fit SONNET overlap variants
+#'
+#' Fit SONNET using either one overlap set shared by every repetition or an
+#' independently sampled overlap set in each repetition. Both wrappers run the
+#' partition, spectral-clustering, label-alignment, and modal-aggregation
+#' workflow used by [sonnet()].
+#'
+#' @param ... Named arguments passed to the SONNET fitting engine: `A`, `K`,
+#'   `num_subnetworks`, `overlap_size`, `extra_nrep`, `ncores`, `seed`,
+#'   `matching_method`, `confirm_large`, `verbose`, `force_windows`, `ram_check`,
+#'   `parameter_select_options`, `laplacian`, `regularize_tau`, and
+#'   `regularize_subnetworks`, plus supported [spectral_cluster()] arguments.
+#'   Do not supply `share_overlap`; each wrapper sets it.
+#'
+#' @return A fitted object of class `sonnet`, containing final labels,
+#'   repetition-level labels and memberships, split information, parameters,
+#'   core allocation, timing, and the matched call.
+#' @seealso [sonnet()], [sonnet_param_select()]
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 1, ncores = 1)
+#' shared <- sonnet_shared_overlap(
+#'   A = A, K = 3, num_subnetworks = 2, overlap_size = 30,
+#'   extra_nrep = 1, ncores = 1, seed = 2, verbose = FALSE,
+#'   spectral_engine = "base"
+#' )
+#' independent <- sonnet_independent_overlap(
+#'   A = A, K = 3, num_subnetworks = 2, overlap_size = 30,
+#'   extra_nrep = 1, ncores = 1, seed = 2, verbose = FALSE,
+#'   spectral_engine = "base"
+#' )
+#' }
 #' @rdname sonnet_overlap_variants
 #' @export
 sonnet_shared_overlap <- function(...) {
@@ -1033,6 +1066,7 @@ sonnet_shared_overlap <- function(...) {
 }
 
 # Fit SONNET with an independently sampled overlap in every repetition.
+#' This variant samples the overlap independently for every repetition.
 #' @rdname sonnet_overlap_variants
 #' @export
 sonnet_independent_overlap <- function(...) {
@@ -1042,6 +1076,68 @@ sonnet_independent_overlap <- function(...) {
 }
 
 # Fit either SONNET overlap variant.
+#' Fit a SONNET network clustering
+#'
+#' Fits scalable network clustering by partitioning a dense or sparse network
+#' into overlapping subnetworks, clustering each subnetwork, aligning labels
+#' through their overlaps, and aggregating repetition-level memberships. The
+#' overlap may be shared across repetitions or sampled independently.
+#'
+#' @param A Non-empty finite square numeric adjacency matrix, including a
+#'   supported sparse `Matrix` object.
+#' @param K Positive integer number of communities, no larger than `nrow(A)`.
+#' @param num_subnetworks Optional positive integer number of subnetworks. If it
+#'   or `overlap_size` is `NULL`, missing partition values are selected with
+#'   [sonnet_param_select()].
+#' @param overlap_size Optional positive integer number of overlap nodes, no
+#'   larger than `nrow(A)`.
+#' @param extra_nrep Nonnegative integer number of additional partition and
+#'   clustering repetitions beyond the initial run.
+#' @param ncores Positive integer worker count used across fitting and label
+#'   alignment tasks.
+#' @param seed Optional nonnegative integer-like reproducibility seed.
+#' @param matching_method Label-alignment method: `"greedy"`, `"hungarian"`, or
+#'   `"brute_force"`.
+#' @param confirm_large Whether to require confirmation before an unusually
+#'   large brute-force label-matching problem.
+#' @param verbose Whether to print progress and timing messages.
+#' @param force_windows Whether to force the Windows-compatible parallel
+#'   backend, including for backend testing on other platforms.
+#' @param ram_check Whether to run RAM preflight checks before major operations.
+#' @param share_overlap Whether every repetition uses the same overlap nodes.
+#'   If `FALSE`, each repetition samples its overlap independently.
+#' @param parameter_select_options Named list of additional options passed to
+#'   [sonnet_param_select()] when partition parameters are selected
+#'   automatically.
+#' @param laplacian Whether to convert adjacency matrices to graph Laplacians
+#'   before spectral clustering.
+#' @param regularize_tau Nonnegative Laplacian regularization strength.
+#' @param regularize_subnetworks Whether Laplacian conversion and regularization
+#'   are performed separately within each subnetwork. If `FALSE`, the full
+#'   network is transformed before subnetworks are extracted.
+#' @param ... Additional named arguments passed to [spectral_cluster()]. `A`,
+#'   `U`, and `K` are reserved and cannot be supplied here. For the print and
+#'   summary methods, additional arguments are currently ignored.
+#' @param x A fitted `sonnet` or `summary.sonnet` object to print.
+#' @param object A fitted `sonnet` object to summarize.
+#'
+#' @return `sonnet()` returns a fitted object of class `sonnet` containing final
+#'   labels, aligned labels and memberships, subnetwork fits and node sets,
+#'   parameters, core allocation, and timing. `summary.sonnet()` returns a
+#'   `summary.sonnet` object. Print methods return their input invisibly.
+#' @seealso [sonnet_shared_overlap()], [sonnet_independent_overlap()],
+#'   [spectral_cluster()]
+#' @examples
+#' \donttest{
+#' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
+#'                   seed = 3, ncores = 1)
+#' fit <- sonnet(
+#'   A, K = 3, num_subnetworks = 2, overlap_size = 30,
+#'   ncores = 1, seed = 4, verbose = FALSE, spectral_engine = "base"
+#' )
+#' fit
+#' summary(fit)
+#' }
 #' @rdname sonnet
 #' @export
 sonnet <- function(
@@ -1092,6 +1188,7 @@ sonnet <- function(
 }
 
 # Print a compact SONNET fit overview.
+#' Print a compact overview of a fitted SONNET model.
 #' @rdname sonnet
 #' @export
 print.sonnet <- function(x, ...) {
@@ -1133,6 +1230,7 @@ print.sonnet <- function(x, ...) {
 }
 
 # Summarize a SONNET fit.
+#' Summarize clustering, overlap, backend, and timing results.
 #' @rdname sonnet
 #' @export
 summary.sonnet <- function(object, ...) {
@@ -1168,6 +1266,7 @@ summary.sonnet <- function(object, ...) {
 }
 
 # Print a SONNET summary.
+#' Print a `summary.sonnet` object.
 #' @rdname sonnet
 #' @export
 print.summary.sonnet <- function(x, ...) {

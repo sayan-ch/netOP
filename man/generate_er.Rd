@@ -18,17 +18,19 @@ generate_er(
 \arguments{
 \item{n}{Positive number of nodes.}
 
-\item{p}{ER edge probability.}
+\item{p}{Optional edge probability.}
 
 \item{average_degree}{Optional target expected average degree.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{representation}{Whether to return a sparse or dense adjacency matrix.}
 
 \item{directed}{Whether to generate a directed network.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal edges may be generated.}
 
-\item{seed, ncores}{Reproducibility seed and worker count.}
+\item{seed}{Optional nonnegative reproducibility seed.}
+
+\item{ncores}{Positive worker count.}
 }
 \value{
 A generated adjacency matrix; see \code{\link[=get_generator_parameters]{get_generator_parameters()}}.

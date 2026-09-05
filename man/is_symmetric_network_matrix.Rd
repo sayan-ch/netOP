@@ -7,9 +7,9 @@
 is_symmetric_network_matrix(A, tolerance = 1e-10)
 }
 \arguments{
-\item{A}{A network matrix.}
+\item{A}{A finite dense or sparse network matrix.}
 
-\item{tolerance}{Numerical comparison or calibration tolerance.}
+\item{tolerance}{Nonnegative numerical symmetry tolerance.}
 }
 \value{
 A single logical value.

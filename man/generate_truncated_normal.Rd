@@ -9,13 +9,18 @@ generate_truncated_normal(n, lower_bound = -2, upper_bound = 2)
 \arguments{
 \item{n}{Positive number of values to generate.}
 
-\item{lower_bound, upper_bound}{Truncation bounds.}
+\item{lower_bound, upper_bound}{Finite truncation bounds with
+\code{lower_bound < upper_bound}.}
 }
 \value{
 A numeric vector of length \code{n}.
 }
 \description{
 Draws standard-normal noise on a finite interval by inverse-CDF sampling.
+}
+\examples{
+x <- generate_truncated_normal(200, lower_bound = -2, upper_bound = 2)
+range(x)
 }
 \seealso{
 \code{\link[=generate_lsm_positions]{generate_lsm_positions()}}

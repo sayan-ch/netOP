@@ -35,7 +35,35 @@
 #
 # Returns:
 # - A list with one result per element of X.
-#' @rdname uni_mclapply
+#' Apply a function consistently across platforms
+#'
+#' Applies `FUN` to each element of `X`. Unix-like systems first attempt
+#' [parallel::mclapply()]. Windows, or `force_windows = TRUE`, uses
+#' `future.apply::future_lapply()`. A temporary multisession plan is created
+#' and restored by default. Backend failures fall back to [base::lapply()]
+#' unless `stop_on_error = TRUE`.
+#'
+#' @param X A vector, list, or other collection accepted by lapply-style
+#'   functions.
+#' @param FUN Function applied to each element of `X`.
+#' @param ... Additional arguments forwarded to `FUN`.
+#' @param ncores Positive number of workers. The default is half the detected
+#'   logical cores, rounded down, with a minimum of one.
+#' @param force_windows Use the Windows-compatible future backend even on
+#'   another operating system.
+#' @param stop_on_error Stop with failed task indices and worker messages
+#'   instead of falling back or returning worker-level errors.
+#' @param manage_future_plan Create and restore a temporary multisession plan.
+#'   Set `FALSE` only when the caller manages the future plan.
+#' @param future_packages Optional package names loaded by future workers,
+#'   including packages needed for S4 method registration.
+#' @param suppress_worker_renv_sync_check Temporarily suppress repeated renv
+#'   synchronization messages while multisession workers start.
+#' @return A list containing one result per element of `X`.
+#' @examples
+#' uni_mclapply(1:3, function(x) x^2, ncores = 1)
+#' @seealso [run_simulations()], [sonnet()]
+#' @name uni_mclapply
 #' @export
 uni_mclapply <- function(
     X,
@@ -265,7 +293,17 @@ uni_mclapply <- function(
 #
 # ps is deliberately optional. Different ps versions and operating systems use
 # slightly different field names, so check the known alternatives.
-#' @rdname ram_reporting
+#' Internal RAM reporting utilities
+#'
+#' Internal helpers for querying, formatting, and reporting memory estimates.
+#' @param x,estimated_bytes Numeric byte counts.
+#' @param max_fraction,reserve_bytes Conservative usable-memory controls.
+#' @param operation,detail Report labels.
+#' @param operation_count,ncores Positive operation and worker counts.
+#' @param terms Named RAM-formula terms.
+#' @return An internal byte count, formatted string, or diagnostic result.
+#' @keywords internal
+#' @name ram_reporting
 available_ram <- function() {
   if (!requireNamespace("ps", quietly = TRUE)) {
     return(NA_real_)
@@ -376,7 +414,19 @@ warn_if_insufficient_ram <- function(
 }
 
 # Estimate RAM for an RSpectra Lanczos/Arnoldi decomposition.
-#' @rdname ram_estimators
+#' Internal RAM estimators
+#'
+#' Internal conservative memory estimators for matrix decompositions and
+#' products.
+#' @param n,p,K,ncv,nu,nv Matrix and decomposition dimensions.
+#' @param safety_factor Conservatism multiplier.
+#' @param input_already_counted Whether input allocation was counted elsewhere.
+#' @param nrow_left,shared_dimension,ncol_right Product dimensions.
+#' @param method,engine,force_engine,safe_d_multiplier,dense_input
+#'   Decomposition controls.
+#' @return A numeric byte estimate or internal estimate record.
+#' @keywords internal
+#' @name ram_estimators
 estimate_rspectra_ram <- function(
     n,
     K,
@@ -758,7 +808,25 @@ report_ram_formula <- function(terms, operation, detail = NULL) {
 # Returns:
 # - A list containing the process result and a one-row metrics data frame with
 #   elapsed_seconds, total_ram_used_mib, and peak_ram_used_mib.
-#' @rdname measure_peak_ram
+#' Measure peak memory use
+#'
+#' Runs an expression or function through `peakRAM::peakRAM()` while retaining
+#' both the evaluated result and the measurement table. The process is
+#' evaluated exactly once.
+#'
+#' @param process An unevaluated R expression or a function to execute and
+#'   measure.
+#' @param ... Additional arguments forwarded when `process` evaluates to a
+#'   function.
+#' @return A list containing `result`, the process value, and `metrics`, a
+#'   one-row data frame with elapsed seconds, total RAM used in MiB, and peak
+#'   RAM used in MiB.
+#' @examples
+#' if (requireNamespace("peakRAM", quietly = TRUE)) {
+#'   measure_peak_ram(sum, 1:10)
+#' }
+#' @seealso [available_ram()], [report_ram_preflight()]
+#' @name measure_peak_ram
 #' @export
 measure_peak_ram <- function(process, ...) {
   if (missing(process)) {
@@ -866,7 +934,51 @@ measure_peak_ram <- function(process, ...) {
 # Returns:
 # - A list of nsim simulation records, invisibly when no work remains during a
 #   resume and normally otherwise.
-#' @rdname run_simulations
+#' Run reproducible simulation jobs
+#'
+#' Executes a simulation function repeatedly with optional outer-loop
+#' parallelism, reproducible per-simulation seeds, durable RDS results,
+#' resuming, and resource measurements. `one_simulation` must accept a named
+#' `simulation` argument. Values supplied through `...` are forwarded
+#' unchanged.
+#'
+#' When `results_file` is supplied, each simulation is stored as a record with
+#' its number, seed, success status, elapsed time, optional peak RAM, returned
+#' value, and error message. Existing results can be replaced, resumed, or
+#' archived.
+#'
+#' @param one_simulation Function implementing one simulation. It must accept
+#'   a named `simulation` argument containing the one-based simulation number.
+#' @param nsim Positive number of simulations.
+#' @param ... Additional arguments forwarded to `one_simulation`.
+#' @param use_parallel_simulations Parallelize the outer simulation loop. The
+#'   default avoids accidental nested parallelism.
+#' @param ncores_outer Positive number of outer-loop workers.
+#' @param seed Optional nonnegative base seed. Simulation `i` uses
+#'   `seed + i - 1`, reduced to R's supported integer range.
+#' @param seeds Optional vector of `nsim` explicit nonnegative seeds. Supply
+#'   either `seed` or `seeds`, not both.
+#' @param results_file Optional trusted RDS path used for durable results.
+#' @param action How to handle an existing results file: `"replace"`,
+#'   `"resume"`, or `"archive"`.
+#' @param retry_failed When resuming, rerun records whose success field is
+#'   `FALSE`.
+#' @param continue_on_error Return all records when simulations fail. If
+#'   `FALSE`, save available records and stop with a summary error.
+#' @param measure_resources Measure elapsed time and peak additional R-managed
+#'   RAM for each simulation.
+#' @param show_progress Print a compact status line for each newly run
+#'   simulation when supported by the backend.
+#' @param force_windows Use the Windows-compatible future backend.
+#' @return A list of `nsim` simulation records, invisibly when a resumed run
+#'   has no work remaining.
+#' @examples
+#' run_simulations(
+#'   one_simulation = function(simulation, offset) simulation + offset,
+#'   nsim = 2, offset = 10, seed = 1, show_progress = FALSE
+#' )
+#' @seealso [uni_mclapply()], [get_generator_parameters()]
+#' @name run_simulations
 #' @export
 run_simulations <- function(
     one_simulation,

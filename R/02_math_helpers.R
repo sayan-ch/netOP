@@ -8,7 +8,17 @@
 #
 # If na_rm is FALSE, NA is treated as a possible modal value. If removal leaves
 # no observations, return a typed NA value.
-#' @rdname modal
+#' Compute the statistical mode
+#'
+#' Returns the most frequent value in `x`, using the first value to break ties.
+#' If `na_rm = FALSE`, `NA` is a possible modal value; if removal leaves no
+#' observations, a typed missing value is returned.
+#' @param x Input vector.
+#' @param na_rm Remove missing values before finding the mode.
+#' @return A scalar with the same basic type as `x`.
+#' @examples modal(c(1, 2, 2, 3))
+#' @seealso [nmi()]
+#' @name modal
 #' @export
 modal <- function(x, na_rm = FALSE) {
   if (length(na_rm) != 1L || !is.logical(na_rm) || is.na(na_rm)) {
@@ -41,7 +51,18 @@ validate_error_inputs <- function(x, y, na_rm) {
 }
 
 # Compute the sum of squared errors between equal-length numeric vectors.
-#' @rdname squared_error_losses
+#' Compute squared-error losses
+#'
+#' `sse()` returns the sum of squared errors; `mse()` returns their mean.
+#' @param x,y Equal-length numeric vectors.
+#' @param na_rm Remove missing comparisons.
+#' @param validate_inputs Validate input types, lengths, and `na_rm`.
+#' @return A nonnegative numeric scalar.
+#' @examples
+#' sse(c(1, 2), c(1, 3))
+#' mse(c(1, 2), c(1, 3))
+#' @seealso [sae()], [mae()]
+#' @name squared_error_losses
 #' @export
 sse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
@@ -50,7 +71,18 @@ sse <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 }
 
 # Compute the sum of absolute errors between equal-length numeric vectors.
-#' @rdname absolute_error_losses
+#' Compute absolute-error losses
+#'
+#' `sae()` returns the sum of absolute errors; `mae()` returns their mean.
+#' @param x,y Equal-length numeric vectors.
+#' @param na_rm Remove missing comparisons.
+#' @param validate_inputs Validate input types, lengths, and `na_rm`.
+#' @return A nonnegative numeric scalar.
+#' @examples
+#' sae(c(1, 2), c(1, 3))
+#' mae(c(1, 2), c(1, 3))
+#' @seealso [sse()], [mse()]
+#' @name absolute_error_losses
 #' @export
 sae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
   if (validate_inputs) validate_error_inputs(x, y, na_rm)
@@ -83,7 +115,16 @@ mae <- function(x, y, na_rm = FALSE, validate_inputs = TRUE) {
 # entropy when it is installed; otherwise compute the same empirical plug-in
 # quantities directly. A constant joint labeling has zero entropy, making the
 # normalized value undefined, and returns NaN.
-#' @rdname nmi
+#' Compute normalized mutual information
+#'
+#' Computes empirical mutual information divided by joint entropy. This
+#' normalization differs from definitions based on marginal entropies. A
+#' constant joint labeling has zero entropy and returns `NaN`.
+#' @param g_1,g_2 Equal-length, non-missing atomic label vectors.
+#' @return A numeric agreement score.
+#' @examples nmi(c(1, 1, 2, 2), c(2, 2, 1, 1))
+#' @seealso [label_match_greedy()], [pair_nmi_loss()]
+#' @name nmi
 #' @export
 nmi <- function(g_1, g_2) {
   if (!is.atomic(g_1) || !is.null(dim(g_1)) ||
@@ -138,7 +179,16 @@ nmi <- function(g_1, g_2) {
 # Missing values remain missing. Infinite values are replaced when the
 # corresponding bound is finite. Names, dimensions, and dimension names are
 # preserved by the elementwise pmax/pmin operations.
-#' @rdname clip_values
+#' Clip numeric values to an interval
+#'
+#' Restricts each value to inclusive bounds while preserving missing values,
+#' names, dimensions, and dimension names.
+#' @param x Numeric vector or matrix.
+#' @param lower_clip,upper_clip Inclusive clipping bounds.
+#' @return An object shaped like `x` with clipped values.
+#' @examples clip_values(c(-1, 0.5, 2), 0, 1)
+#' @seealso [clip_probabilities()]
+#' @name clip_values
 #' @export
 clip_values <- function(x, lower_clip = -Inf, upper_clip = Inf) {
   if (!is.numeric(x)) {
@@ -166,7 +216,16 @@ clip_values <- function(x, lower_clip = -Inf, upper_clip = Inf) {
 }
 
 # Clip probabilities to [eps, 1 - eps] to protect logs and inverse links.
-#' @rdname clip_probabilities
+#' Clip probability values safely
+#'
+#' Restricts probabilities to `[eps, 1 - eps]` to protect logarithms and
+#' inverse-link calculations.
+#' @param P Numeric probability vector or matrix.
+#' @param eps Finite clipping constant strictly between zero and one half.
+#' @return An object shaped like `P` with clipped probabilities.
+#' @examples clip_probabilities(c(0, 0.5, 1), eps = 0.01)
+#' @seealso [clip_values()], [bin_dev()]
+#' @name clip_probabilities
 #' @export
 clip_probabilities <- function(P, eps = 1e-6) {
   if (length(eps) != 1L ||
@@ -187,7 +246,22 @@ clip_probabilities <- function(P, eps = 1e-6) {
 # Probabilities are clipped to [epsilon, 1 - epsilon] before taking logarithms.
 # Despite the historical name, this returns the summed negative log-likelihood,
 # without the factor of two sometimes included in definitions of deviance.
-#' @rdname binary_deviance_losses
+#' Compute binary deviance losses
+#'
+#' `bin_dev()` returns summed binary cross-entropy after clipping predictions;
+#' despite its historical name it does not multiply by two.
+#' `bin_dev_mean()` averages over retained response-probability pairs.
+#' @param x Binary response vector.
+#' @param y Numeric predicted-probability vector.
+#' @param epsilon Finite clipping constant strictly between zero and one half.
+#' @param na_rm Remove comparisons containing missing values.
+#' @param validate_inputs Validate types, lengths, responses, and predictions.
+#' @return A nonnegative sum from `bin_dev()` or mean from `bin_dev_mean()`.
+#' @examples
+#' bin_dev(c(0, 1), c(0.1, 0.8))
+#' bin_dev_mean(c(0, 1), c(0.1, 0.8))
+#' @seealso [auc()], [clip_probabilities()]
+#' @name binary_deviance_losses
 #' @export
 bin_dev <- function(
     x, y, epsilon = 1e-5, na_rm = TRUE, validate_inputs = TRUE) {
@@ -249,7 +323,22 @@ bin_dev_mean <- function(
 # otherwise, use an equivalent base-R rank calculation. This makes the helper
 # usable when Rcpp, a compiler, the shared library, or the exported function is
 # unavailable. Ties receive their average rank in both implementations.
-#' @rdname auc_losses
+#' Compute AUC scores and losses
+#'
+#' `auc()` computes binary ROC AUC using average ranks for tied scores and a
+#' compiled implementation when available. `auc_as_loss()` returns one minus
+#' AUC so smaller values are better.
+#' @param A Binary response vector.
+#' @param P Numeric prediction-score vector.
+#' @param use_cpp Try the registered compiled implementation before the R
+#'   implementation.
+#' @param validate_inputs Validate binary responses and finite scores.
+#' @return A numeric scalar containing AUC or one minus AUC.
+#' @examples
+#' auc(c(0, 1, 1), c(0.1, 0.7, 0.8), use_cpp = FALSE)
+#' auc_as_loss(c(0, 1, 1), c(0.1, 0.7, 0.8), use_cpp = FALSE)
+#' @seealso [bin_dev()], [bin_dev_mean()]
+#' @name auc_losses
 #' @export
 auc <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
   group <- as.numeric(A)
@@ -317,7 +406,14 @@ auc_as_loss <- function(A, P, use_cpp = TRUE, validate_inputs = TRUE) {
 }
 
 # Compute log(1 + exp(x)) without overflow or avoidable underflow.
-#' @rdname softplus
+#' Compute the softplus transform
+#'
+#' Evaluates the numerically stable softplus transform elementwise.
+#' @param x Numeric vector or matrix.
+#' @return A numeric object matching the shape of `x`.
+#' @examples softplus(c(-1, 0, 1))
+#' @seealso [sigmoid()]
+#' @name softplus
 #' @export
 softplus <- function(x) {
   if (!is.numeric(x)) {
@@ -327,7 +423,14 @@ softplus <- function(x) {
 }
 
 # Compute the logistic sigmoid with a numerically stable base-R implementation.
-#' @rdname sigmoid
+#' Compute the sigmoid transform
+#'
+#' Evaluates the numerically stable logistic sigmoid elementwise.
+#' @param x Numeric vector or matrix.
+#' @return A numeric object matching the shape of `x`.
+#' @examples sigmoid(c(-1, 0, 1))
+#' @seealso [softplus()]
+#' @name sigmoid
 #' @export
 sigmoid <- function(x) {
   if (!is.numeric(x)) {
@@ -361,7 +464,23 @@ validate_extrema_inputs <- function(x, na_rm, temperature = NULL) {
 # Missing positions receive zero weight when na_rm is TRUE. If na_rm is FALSE,
 # any missing score produces an all-NA result. Positive infinities split all
 # mass equally; an all-negative-infinity vector is treated as a complete tie.
-#' @rdname extrema_selectors
+#' Compute hard and soft extrema
+#'
+#' `softmax()` and `softmin()` return normalized exponential weights.
+#' `hardmax()` and `hardmin()` return zero-one selectors marking all ties.
+#' The `which_soft*()` functions sample one index from the soft weights; the
+#' `which_hard*()` functions return every tied hard-extremum index.
+#' @param x Numeric vector whose extrema are selected.
+#' @param temperature Positive soft-selection temperature.
+#' @param na_rm Remove missing values before selection.
+#' @return A numeric weight vector or selected index vector, according to the
+#'   function called.
+#' @examples
+#' softmax(c(1, 2, 3))
+#' hardmin(c(2, 1, 1))
+#' which_hardmax(c(1, 3, 3))
+#' @seealso [softplus()], [sigmoid()]
+#' @name extrema_selectors
 #' @export
 softmax <- function(x, temperature = 1, na_rm = FALSE) {
   validate_extrema_inputs(x, na_rm, temperature)
@@ -483,7 +602,17 @@ which_hardmin <- function(x, na_rm = FALSE) {
 #
 # The compiled implementation is optional. If it is unavailable or fails, the
 # wrapper uses base::outer with identical orientation and output semantics.
-#' @rdname outer_add
+#' Add vectors by outer expansion
+#'
+#' Forms all pairwise sums, using a registered compiled implementation when
+#' requested and available and otherwise [base::outer()].
+#' @param x,y Numeric vectors.
+#' @param operator Outer operation; currently only `"+"` is supported.
+#' @param use_cpp Try the compiled implementation before the R implementation.
+#' @return A numeric matrix with `length(x)` rows and `length(y)` columns.
+#' @examples outer_add(1:2, 3:4, use_cpp = FALSE)
+#' @seealso [procrustes()]
+#' @name outer_add
 #' @export
 outer_add <- function(x, y, operator = "+", use_cpp = TRUE) {
   if (!identical(operator, "+")) {
@@ -537,7 +666,27 @@ outer_add <- function(x, y, operator = "+", use_cpp = TRUE) {
 # Translation-only alignment uses the optional compiled implementation when it
 # is available. Every other path uses BLAS-backed R matrix operations. X may be
 # padded with zero columns when X_star has a larger embedding dimension.
-#' @rdname procrustes
+#' Align point configurations by Procrustes transformation
+#'
+#' Aligns `X` to `X_star` by an orthogonal transformation with optional
+#' centering and dilation. Inputs may have different column counts; the
+#' narrower configuration is padded with zero columns. A compiled translated,
+#' non-dilated path is used when requested and available.
+#' @param X Numeric point-configuration matrix to align.
+#' @param X_star Numeric reference point-configuration matrix with the same
+#'   number of rows as `X`.
+#' @param translate Center configurations and estimate translation.
+#' @param dilate Estimate and apply a dilation factor.
+#' @param sumsq Include residual sum of squares.
+#' @param use_cpp Try the registered compiled implementation.
+#' @param validate_inputs Validate matrices and logical controls.
+#' @return A list containing aligned `X_new` and `rotation`, with optional
+#'   `translation`, `scale`, and `sse` components.
+#' @examples
+#' X <- matrix(c(0, 0, 1, 0, 0, 1), ncol = 2, byrow = TRUE)
+#' procrustes(X, X, use_cpp = FALSE)$X_new
+#' @seealso [ase()], [generate_latent_positions()]
+#' @name procrustes
 #' @export
 procrustes <- function(
     X,
@@ -700,7 +849,15 @@ procrustes <- function(
 #
 # This is the edge/entry density called "sparsity" by the decomposition APIs.
 # The explicit name avoids ambiguity with the fraction of zero entries.
-#' @rdname matrix_density
+#' Compute matrix density
+#'
+#' Returns the fraction of matrix entries that are nonzero. This is the entry
+#' density called `"sparsity"` by the decomposition APIs.
+#' @param A A finite, nonempty dense or sparse matrix.
+#' @return A numeric scalar between zero and one.
+#' @examples matrix_density(diag(3))
+#' @seealso [generate_adjacency()]
+#' @name matrix_density
 #' @export
 matrix_density <- function(A) {
   if (is.null(dim(A)) || length(dim(A)) != 2L) {
@@ -717,7 +874,13 @@ matrix_density <- function(A) {
 }
 
 # Test matrix symmetry for both base and Matrix-package matrix classes.
-#' @rdname is_symmetric_matrix
+#' Test matrix symmetry internally
+#'
+#' Tests base and Matrix-package matrix classes for numerical symmetry.
+#' @param A A dense or sparse matrix.
+#' @return A logical scalar.
+#' @keywords internal
+#' @name is_symmetric_matrix
 is_symmetric_matrix <- function(A) {
   if (inherits(A, "Matrix")) {
     if (!requireNamespace("Matrix", quietly = TRUE)) {
@@ -736,7 +899,20 @@ is_symmetric_matrix <- function(A) {
 # When tau is positive, regularize the adjacency before forming the Laplacian:
 # A_tau = A + tau * mean(deg) / n. Thus tau is dimensionless, tau = 1 adds
 # one average degree across every row, and tau = 0 recovers the usual matrix.
-#' @rdname graph_laplacian
+#' Construct a graph Laplacian
+#'
+#' Constructs an unnormalized or symmetric normalized graph Laplacian. For
+#' positive `tau`, the adjacency is first regularized by adding
+#' `tau * mean(degree) / n` to every entry; `tau = 0` gives the usual matrix.
+#' @param A A finite symmetric square dense or sparse adjacency matrix.
+#' @param normalized Construct the symmetric normalized Laplacian.
+#' @param tau Nonnegative dimensionless regularization strength.
+#' @return A dense or sparse Laplacian matrix.
+#' @examples
+#' A <- matrix(c(0, 1, 1, 0), 2, 2)
+#' graph_laplacian(A, normalized = FALSE)
+#' @seealso [spectral_cluster()], [ase()]
+#' @name graph_laplacian
 #' @export
 graph_laplacian <- function(A, normalized = TRUE, tau = 0) {
   if (is.null(dim(A)) || length(dim(A)) != 2L || nrow(A) != ncol(A)) {
@@ -816,7 +992,29 @@ graph_laplacian <- function(A, normalized = TRUE, tau = 0) {
 # unsuccessful unless force_engine is TRUE. The irlba option is retained for
 # input compatibility but is redirected because an SVD is not a signed
 # eigendecomposition. `scale_by = "sparsity"` uses matrix_density(A).
-#' @rdname eig_decomp
+#' Compute an eigendecomposition
+#'
+#' Computes selected eigenpairs of a finite symmetric matrix. Partial
+#' decomposition falls back to [base::eigen()] unless `force_engine = TRUE`.
+#' The `"irlba"` option is accepted for compatibility but redirected because
+#' an SVD is not a signed eigendecomposition.
+#' @param A A finite symmetric square dense or sparse matrix.
+#' @param d Positive number of eigencomponents to return.
+#' @param only_values Return eigenvalues without eigenvectors.
+#' @param scale_by Scale by `"none"`, matrix `"dimension"`, or entry
+#'   `"sparsity"`.
+#' @param use_laplacian Transform `A` with [graph_laplacian()] first.
+#' @param engine Decomposition backend.
+#' @param force_engine Stop instead of falling back when the selected partial
+#'   backend is unavailable or fails.
+#' @param order_by Order by signed `"value"` or absolute `"magnitude"`.
+#' @param safe_d_multiplier Multiplier for extra partial components computed
+#'   before selecting the requested components.
+#' @param validate_inputs Validate matrix and option inputs.
+#' @return A list with `values` and, unless `only_values`, `vectors`.
+#' @examples eig_decomp(diag(c(3, 2, 1)), d = 2, engine = "base")
+#' @seealso [singular_decomp()], [ase()]
+#' @name eig_decomp
 #' @export
 eig_decomp <- function(
     A,
@@ -992,7 +1190,29 @@ eig_decomp <- function(
 # Partial engines fall back to base::svd when unavailable or unsuccessful
 # unless force_engine is TRUE. Singular values are non-negative, so the value
 # and magnitude orderings are equivalent and both are retained for API parity.
-#' @rdname singular_decomp
+#' Compute a singular-value decomposition
+#'
+#' Computes selected singular values and optional left and right vectors.
+#' Partial backends fall back to [base::svd()] unless `force_engine = TRUE`.
+#' @param A A finite dense or sparse matrix.
+#' @param d Positive number of singular components to return.
+#' @param only_values Return singular values without singular vectors.
+#' @param nu,nv Numbers of left and right singular vectors to return.
+#' @param scale_by Scale by `"none"`, matrix `"dimension"`, or entry
+#'   `"sparsity"`.
+#' @param use_laplacian Transform `A` with [graph_laplacian()] first.
+#' @param engine Decomposition backend: `"rspectra"`, `"base"`, or `"irlba"`.
+#' @param force_engine Stop instead of falling back when the selected partial
+#'   backend is unavailable or fails.
+#' @param order_by Component ordering convention; singular values make
+#'   `"value"` and `"magnitude"` equivalent.
+#' @param safe_d_multiplier Multiplier for extra partial components computed
+#'   before selecting the requested components.
+#' @param validate_inputs Validate matrix and option inputs.
+#' @return A list with `values` and requested `u` and `v` matrices.
+#' @examples singular_decomp(diag(c(3, 2, 1)), d = 2, engine = "base")
+#' @seealso [eig_decomp()], [truncated_svd_reconstruct()]
+#' @name singular_decomp
 #' @export
 singular_decomp <- function(
     A,
@@ -1173,7 +1393,22 @@ singular_decomp <- function(
 # a diagonal matrix or using the general matrix-multiplication operator. The
 # default [0, 1] bounds produce a probability-matrix estimate. Use infinite
 # bounds to obtain the unmodified truncated-SVD reconstruction.
-#' @rdname truncated_svd_reconstruct
+#' Reconstruct a truncated singular-value approximation
+#'
+#' Reconstructs `U_d diag(s_d) V_d'` without materializing the diagonal matrix,
+#' then clips entries to the requested interval. The default bounds produce a
+#' probability-matrix estimate; infinite bounds leave the reconstruction
+#' unmodified.
+#' @param A A finite dense or sparse matrix.
+#' @param d Positive reconstruction rank.
+#' @param lower_clip,upper_clip Inclusive clipping bounds.
+#' @param engine Singular-decomposition backend.
+#' @param force_engine Stop instead of falling back when the backend fails.
+#' @param safe_d_multiplier Multiplier for extra partial components.
+#' @return A numeric rank-`d` matrix approximation.
+#' @examples truncated_svd_reconstruct(diag(3), d = 1, engine = "base")
+#' @seealso [singular_decomp()], [usvt()]
+#' @name truncated_svd_reconstruct
 #' @export
 truncated_svd_reconstruct <- function(
     A,
@@ -1218,7 +1453,19 @@ truncated_svd_reconstruct <- function(
 # This historical variant sets d = ceiling(n^(1/3)), computes the corresponding
 # truncated SVD, and clips every reconstructed entry to [0, 1]. Its public name
 # is shortened to `usvt` under the project naming rules.
-#' @rdname usvt
+#' Estimate a matrix with universal singular-value thresholding
+#'
+#' Applies the historical pasted USVT rule `d = ceiling(n^(1/3))`, reconstructs
+#' that truncated SVD, and clips every entry to the supplied interval.
+#' @param A A finite nonempty square dense or sparse matrix.
+#' @param lower_clip,upper_clip Inclusive clipping bounds.
+#' @param engine Singular-decomposition backend.
+#' @param force_engine Stop instead of falling back when the backend fails.
+#' @param safe_d_multiplier Multiplier for extra partial components.
+#' @return A dense thresholded matrix estimate.
+#' @examples usvt(diag(3), engine = "base")
+#' @seealso [singular_decomp()], [ase()]
+#' @name usvt
 #' @export
 usvt <- function(
     A,

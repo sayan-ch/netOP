@@ -18,15 +18,17 @@ generate_adjacency(
 \arguments{
 \item{P}{Dense or sparse edge-probability matrix.}
 
-\item{representation}{Dense or sparse output representation.}
+\item{representation}{Whether to return a sparse or dense adjacency matrix.}
 
 \item{directed}{Whether to sample directed edges independently.}
 
-\item{self_loops}{Include diagonal edges.}
+\item{self_loops}{Whether diagonal edges may be sampled.}
 
-\item{seed, ncores}{Reproducibility seed and worker count.}
+\item{seed}{Optional nonnegative reproducibility seed.}
 
-\item{validate_inputs}{Validate direct probability input.}
+\item{ncores}{Positive worker count.}
+
+\item{validate_inputs}{Whether to validate \code{P} before sampling.}
 
 \item{n}{Optional network size inferred from \code{P} when omitted.}
 }
@@ -36,6 +38,12 @@ A base matrix or sparse \code{dgCMatrix}, according to \code{representation}.
 \description{
 Samples a dense or sparse adjacency matrix from \code{P}. Explicit row-specific
 seeds make results reproducible across worker counts.
+}
+\examples{
+P <- matrix(0.03, 200, 200)
+diag(P) <- 0
+A <- generate_adjacency(P, seed = 3, ncores = 1)
+dim(A)
 }
 \seealso{
 \code{\link[=generate_er]{generate_er()}}, \code{\link[=generate_rdpg]{generate_rdpg()}}, \code{\link[=generate_sbm]{generate_sbm()}}

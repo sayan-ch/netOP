@@ -643,6 +643,11 @@ netcrop_rdpg <- function(
         for (loss_id in seq_along(losses)) {
           loss_name <- losses[loss_id]
           loss_arguments <- list(A_test_numeric, P_hat_numeric)
+
+          if(loss_name %in% c("sse", "mse", "sae", "mae")) {
+            loss_arguments <- list(A_test_numeric, rho_hat * P_hat_numeric)
+          }
+
           if (loss_accepts_prevalidation[loss_id]) {
             loss_arguments$validate_inputs <- FALSE
           }

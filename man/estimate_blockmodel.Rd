@@ -12,7 +12,8 @@ estimate_sbm(
   fold_nodes = NULL,
   directed = FALSE,
   self_loops = FALSE,
-  validate_inputs = TRUE
+  validate_inputs = TRUE,
+  stabilizer = 0.01
 )
 
 estimate_dcbm(
@@ -46,14 +47,15 @@ estimate_dcbm(
 \item{validate_inputs}{Whether to validate inputs; only audited internal
 callers should disable this.}
 
+\item{stabilizer}{Nonnegative density-scaled pseudocount used by the SBM and
+DCBM plug-in estimators.}
+
 \item{method}{DCBM estimator, either \code{"plugin"} or \code{"spectral"}.}
 
 \item{row_norm}{Optional supplied DCBM spectral row norms.}
 
 \item{psi_omit}{Number of trailing nodes omitted from returned DCBM degree
 parameters.}
-
-\item{stabilizer}{Nonnegative plug-in denominator stabilizer.}
 
 \item{spectral_engine}{Spectral-decomposition backend.}
 

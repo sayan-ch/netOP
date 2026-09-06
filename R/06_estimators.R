@@ -27,7 +27,8 @@
 #' @param row_norm Optional supplied DCBM spectral row norms.
 #' @param psi_omit Number of trailing nodes omitted from returned DCBM degree
 #'   parameters.
-#' @param stabilizer Nonnegative plug-in denominator stabilizer.
+#' @param stabilizer Nonnegative density-scaled pseudocount used by the SBM and
+#'   DCBM plug-in estimators.
 #' @param spectral_engine Spectral-decomposition backend.
 #' @param spectral_options Named options passed to the spectral decomposition.
 #' @return A fitted block-model object.
@@ -47,10 +48,19 @@ estimate_sbm <- function(
     fold_nodes = NULL,
     directed = FALSE,
     self_loops = FALSE,
-    validate_inputs = TRUE) {
+    validate_inputs = TRUE,
+    stabilizer = 0.01) {
   if (length(validate_inputs) != 1L || !is.logical(validate_inputs) ||
       is.na(validate_inputs)) {
     stop("validate_inputs must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (length(stabilizer) != 1L ||
+      !is.numeric(stabilizer) ||
+      is.na(stabilizer) ||
+      !is.finite(stabilizer) ||
+      stabilizer < 0) {
+    stop("stabilizer must be one finite non-negative number.",
+         call. = FALSE)
   }
   if (validate_inputs &&
       (is.null(dim(A)) || length(dim(A)) != 2L || any(dim(A) < 1L))) {
@@ -190,7 +200,8 @@ estimate_sbm <- function(
   }
 
   rho_hat <- Matrix::mean(A)
-  B_hat <- (numerator + 0.01 * rho_hat) / (denominator + 0.01)
+  B_hat <- (numerator + stabilizer * rho_hat) /
+    (denominator + stabilizer)
   # B_hat[denominator == 0] <- NA_real_
 
   dimnames(B_hat) <- list(

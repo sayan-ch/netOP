@@ -61,8 +61,12 @@ the calling environment, such as \code{"sse"}.}
 \item{model_candidates}{Character vector selecting \code{"SBM"}, \code{"DCBM"}, or
 both candidate model families.}
 
-\item{sbm_est_options, dcbm_est_options}{Named lists of additional arguments
-for the corresponding block-model estimators.}
+\item{sbm_est_options, dcbm_est_options}{Named lists with optional
+\code{spectral_cluster} and \code{estimate} components, each itself a named list:
+\code{list(spectral_cluster = list(...), estimate = list(...))}. The
+\code{spectral_cluster} component is passed to \code{\link[=spectral_cluster]{spectral_cluster()}}. The
+\code{estimate} component is passed to \code{\link[=estimate_sbm]{estimate_sbm()}} for \code{sbm_est_options}
+and to \code{\link[=estimate_dcbm]{estimate_dcbm()}} for \code{dcbm_est_options}.}
 
 \item{matching_method}{Label-alignment method: \code{"greedy"}, \code{"hungarian"}, or
 \code{"brute_force"}.}

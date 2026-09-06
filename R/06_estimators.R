@@ -30,7 +30,9 @@
 #' @param stabilizer Nonnegative density-scaled pseudocount used by the SBM and
 #'   DCBM plug-in estimators.
 #' @param spectral_engine Spectral-decomposition backend.
-#' @param spectral_options Named options passed to the spectral decomposition.
+#' @param spectral_options Named list of spectral-decomposition options; see
+#'   the `spectral_options` argument of [spectral_cluster()] for the accepted
+#'   options and their decomposition backends.
 #' @return A fitted block-model object.
 #' @examples
 #' A <- generate_sbm(n = 200, K = 3, alpha = 0.4, beta = 0.1,
@@ -556,7 +558,9 @@ estimate_dcbm <- function(
 #'   parameters.
 #' @param stabilizer Nonnegative plug-in denominator stabilizer.
 #' @param spectral_engine Spectral-decomposition backend.
-#' @param spectral_options Named options passed to the spectral decomposition.
+#' @param spectral_options Named list passed to [estimate_dcbm()]; see that
+#'   function and [spectral_cluster()] for the accepted spectral-decomposition
+#'   options.
 #' @param self_loops Whether diagonal probabilities are retained.
 #' @param lower_clip,upper_clip Finite lower and upper bounds applied to fitted
 #'   probabilities.

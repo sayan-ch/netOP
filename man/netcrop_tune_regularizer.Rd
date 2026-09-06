@@ -70,8 +70,14 @@ automatically.}
 \item{label_reference}{Whether label losses use a full-network reference or
 a leave-pair-out reference.}
 
-\item{spectral_options, cluster_options, estimator_options}{Named option lists
-forwarded to the corresponding fitting stages.}
+\item{spectral_options}{Named list of additional options passed to
+\code{\link[=spectral_cluster]{spectral_cluster()}}.}
+
+\item{cluster_options}{Named list of additional options passed to
+\code{\link[stats:kmeans]{stats::kmeans()}} for SBM fitting or \code{\link[cluster:clara]{cluster::clara()}} for DCBM fitting.}
+
+\item{estimator_options}{Named list of additional options passed to
+\code{\link[=estimate_sbm]{estimate_sbm()}} for SBM fitting or \code{\link[=estimate_dcbm]{estimate_dcbm()}} for DCBM fitting.}
 
 \item{matching_method}{Label-alignment method.}
 
@@ -87,8 +93,8 @@ forwarded to the corresponding fitting stages.}
 
 \item{ram_check}{Report conservative RAM demand.}
 
-\item{parameter_select_options}{Named options for automatic partition
-selection.}
+\item{parameter_select_options}{Named list of additional options passed to
+\code{\link[=netcrop_param_select]{netcrop_param_select()}} for automatic partition selection.}
 
 \item{retain_intermediates}{Retain all or minimal intermediate results.}
 

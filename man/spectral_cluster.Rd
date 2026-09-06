@@ -46,11 +46,15 @@ the fit, assign random labels, or remove them during clustering.}
 
 \item{spectral_engine}{Spectral backend: \code{"RSpectra"}, \code{"irlba"}, or base R.}
 
-\item{spectral_options}{Named list of additional spectral-backend options.}
+\item{spectral_options}{Named list of additional options passed to
+\code{\link[=eig_decomp]{eig_decomp()}} when \code{spectral_method = "eigen"} or \code{\link[=singular_decomp]{singular_decomp()}}
+when \code{spectral_method = "svd"}.}
 
 \item{cluster_engine}{Clustering backend: \code{"clara"}, \code{"kmeans"}, or \code{"pam"}.}
 
-\item{cluster_options}{Named list of additional clustering-backend options.}
+\item{cluster_options}{Named list of additional options passed to
+\code{\link[cluster:clara]{cluster::clara()}}, \code{\link[stats:kmeans]{stats::kmeans()}}, or \code{\link[cluster:pam]{cluster::pam()}}, according to
+\code{cluster_engine}.}
 
 \item{ram_check}{Whether to report a conservative RAM preflight estimate.}
 

@@ -49,7 +49,10 @@ summaries in addition to its first repetition.}
 
 \item{confirm_large}{Confirm potentially factorial brute-force matching.}
 
-\item{sonnet_options, spectral_cluster_options}{Named fitter option lists.}
+\item{sonnet_options}{Named list of additional options passed to \code{\link[=sonnet]{sonnet()}}.}
+
+\item{spectral_cluster_options}{Named list of additional options passed to
+\code{\link[=spectral_cluster]{spectral_cluster()}}.}
 
 \item{ncores}{Positive worker count.}
 

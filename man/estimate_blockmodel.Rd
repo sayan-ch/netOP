@@ -59,7 +59,9 @@ parameters.}
 
 \item{spectral_engine}{Spectral-decomposition backend.}
 
-\item{spectral_options}{Named options passed to the spectral decomposition.}
+\item{spectral_options}{Named list of spectral-decomposition options; see
+the \code{spectral_options} argument of \code{\link[=spectral_cluster]{spectral_cluster()}} for the accepted
+options and their decomposition backends.}
 }
 \value{
 A fitted block-model object.

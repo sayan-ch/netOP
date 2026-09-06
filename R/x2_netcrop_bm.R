@@ -27,8 +27,12 @@
 #'   the calling environment, such as `"sse"`.
 #' @param model_candidates Character vector selecting `"SBM"`, `"DCBM"`, or
 #'   both candidate model families.
-#' @param sbm_est_options,dcbm_est_options Named lists of additional arguments
-#'   for the corresponding block-model estimators.
+#' @param sbm_est_options,dcbm_est_options Named lists with optional
+#'   `spectral_cluster` and `estimate` components, each itself a named list:
+#'   `list(spectral_cluster = list(...), estimate = list(...))`. The
+#'   `spectral_cluster` component is passed to [spectral_cluster()]. The
+#'   `estimate` component is passed to [estimate_sbm()] for `sbm_est_options`
+#'   and to [estimate_dcbm()] for `dcbm_est_options`.
 #' @param matching_method Label-alignment method: `"greedy"`, `"hungarian"`, or
 #'   `"brute_force"`.
 #' @param confirm_large Optional logical passed to label matching to confirm an

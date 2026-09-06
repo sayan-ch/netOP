@@ -334,9 +334,13 @@ ase <- function(
 #' @param row_normalize Whether to normalize spectral-representation rows.
 #' @param spectral_method Whether to use an eigendecomposition or SVD.
 #' @param spectral_engine Spectral backend: `"RSpectra"`, `"irlba"`, or base R.
-#' @param spectral_options Named list of additional spectral-backend options.
+#' @param spectral_options Named list of additional options passed to
+#'   [eig_decomp()] when `spectral_method = "eigen"` or [singular_decomp()]
+#'   when `spectral_method = "svd"`.
 #' @param cluster_engine Clustering backend: `"clara"`, `"kmeans"`, or `"pam"`.
-#' @param cluster_options Named list of additional clustering-backend options.
+#' @param cluster_options Named list of additional options passed to
+#'   [cluster::clara()], [stats::kmeans()], or [cluster::pam()], according to
+#'   `cluster_engine`.
 #' @param ram_check Whether to report a conservative RAM preflight estimate.
 #' @param validate_inputs Whether to validate inputs; only audited internal
 #'   callers should disable this.

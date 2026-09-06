@@ -101,8 +101,12 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 #' @param loss_types Optional named mapping for compatible legacy loss labels.
 #' @param label_reference Whether label losses use a full-network reference or
 #'   a leave-pair-out reference.
-#' @param spectral_options,cluster_options,estimator_options Named option lists
-#'   forwarded to the corresponding fitting stages.
+#' @param spectral_options Named list of additional options passed to
+#'   [spectral_cluster()].
+#' @param cluster_options Named list of additional options passed to
+#'   [stats::kmeans()] for SBM fitting or [cluster::clara()] for DCBM fitting.
+#' @param estimator_options Named list of additional options passed to
+#'   [estimate_sbm()] for SBM fitting or [estimate_dcbm()] for DCBM fitting.
 #' @param matching_method Label-alignment method.
 #' @param confirm_large Confirm potentially factorial brute-force matching.
 #' @param ncores Positive worker count.
@@ -110,8 +114,8 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 #' @param verbose Print progress messages.
 #' @param force_windows Use the Windows-compatible parallel backend.
 #' @param ram_check Report conservative RAM demand.
-#' @param parameter_select_options Named options for automatic partition
-#'   selection.
+#' @param parameter_select_options Named list of additional options passed to
+#'   [netcrop_param_select()] for automatic partition selection.
 #' @param retain_intermediates Retain all or minimal intermediate results.
 #' @param x,object A fitted `netcrop_regularizer` object handled by an S3
 #'   method.

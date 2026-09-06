@@ -2895,9 +2895,11 @@ dkest_tune_regularizer <- function(
 #' @param row_normalize Normalize embedding rows before clustering.
 #' @param spectral_method Use an eigen- or singular-vector representation.
 #' @param spectral_engine Decomposition backend.
-#' @param spectral_options Named decomposition options.
+#' @param spectral_options Named list of decomposition options passed to the
+#'   `spectral_options` argument of [spectral_cluster()].
 #' @param cluster_engine Clustering backend.
-#' @param cluster_options Named clustering options.
+#' @param cluster_options Named list of clustering options passed to the
+#'   `cluster_options` argument of [spectral_cluster()].
 #' @param ncores Positive task-worker count.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @param verbose Print progress messages.
@@ -3273,7 +3275,8 @@ mult_reg_spectral_cluster <- function(
 #' @param force_windows Use the Windows-compatible parallel backend.
 #' @param ram_check Report conservative RAM demand.
 #' @param share_overlap Reuse one overlap across repetitions.
-#' @param parameter_select_options Named automatic-partition options.
+#' @param parameter_select_options Named list of automatic-partition options
+#'   passed to [sonnet_param_select()] through [sonnet()].
 #' @param failure_handling Stop or omit failed candidate fits.
 #' @param retain_fits Retain fitted `sonnet` objects.
 #' @param ... Named spectral-clustering arguments forwarded to [sonnet()].
@@ -3595,7 +3598,9 @@ mult_reg_sonnet <- function(
 #' @param engines Fit `"sonnet"`, `"spectral_cluster"`, or both.
 #' @param matching_method Label-alignment method used for accuracy.
 #' @param confirm_large Confirm potentially factorial brute-force matching.
-#' @param sonnet_options,spectral_cluster_options Named fitter option lists.
+#' @param sonnet_options Named list of additional options passed to [sonnet()].
+#' @param spectral_cluster_options Named list of additional options passed to
+#'   [spectral_cluster()].
 #' @param ncores Positive worker count.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @param verbose Print progress messages.

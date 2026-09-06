@@ -55,7 +55,8 @@ automatically.}
 
 \item{share_overlap}{Reuse one overlap across repetitions.}
 
-\item{parameter_select_options}{Named automatic-partition options.}
+\item{parameter_select_options}{Named list of automatic-partition options
+passed to \code{\link[=sonnet_param_select]{sonnet_param_select()}} through \code{\link[=sonnet]{sonnet()}}.}
 
 \item{failure_handling}{Stop or omit failed candidate fits.}
 

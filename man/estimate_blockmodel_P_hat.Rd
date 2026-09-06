@@ -59,7 +59,9 @@ parameters.}
 
 \item{spectral_engine}{Spectral-decomposition backend.}
 
-\item{spectral_options}{Named options passed to the spectral decomposition.}
+\item{spectral_options}{Named list passed to \code{\link[=estimate_dcbm]{estimate_dcbm()}}; see that
+function and \code{\link[=spectral_cluster]{spectral_cluster()}} for the accepted spectral-decomposition
+options.}
 }
 \value{
 A fitted edge-probability matrix.

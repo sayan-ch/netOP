@@ -45,11 +45,13 @@ mult_reg_spectral_cluster(
 
 \item{spectral_engine}{Decomposition backend.}
 
-\item{spectral_options}{Named decomposition options.}
+\item{spectral_options}{Named list of decomposition options passed to the
+\code{spectral_options} argument of \code{\link[=spectral_cluster]{spectral_cluster()}}.}
 
 \item{cluster_engine}{Clustering backend.}
 
-\item{cluster_options}{Named clustering options.}
+\item{cluster_options}{Named list of clustering options passed to the
+\code{cluster_options} argument of \code{\link[=spectral_cluster]{spectral_cluster()}}.}
 
 \item{ncores}{Positive task-worker count.}
 

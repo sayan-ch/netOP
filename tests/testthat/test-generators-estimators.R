@@ -63,4 +63,18 @@ test_that("read_network handles unweighted two- and three-column edge lists", {
   )
   expect_equal(three_column[1, 2], 1)
   expect_equal(three_column[2, 3], 1)
+
+  logical_column_path <- tempfile(fileext = ".csv")
+  writeLines(
+    c("node_from,node_to,weight", "1,2,TRUE", "2,3,FALSE"),
+    logical_column_path
+  )
+  expect_warning(
+    logical_column <- read_network(
+      logical_column_path, representation = "dense", weighted = FALSE
+    ),
+    "weight column is present but ignored"
+  )
+  expect_equal(logical_column[1, 2], 1)
+  expect_equal(logical_column[2, 3], 1)
 })

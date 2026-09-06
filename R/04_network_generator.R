@@ -345,7 +345,7 @@ read_network <- function(
       comment.char = "#",
       stringsAsFactors = FALSE,
       check.names = FALSE,
-      colClasses = "numeric"
+      colClasses = if (identical(weighted, FALSE)) NA else "numeric"
     ),
     error = function(e) {
       stop("Could not read the edge list: ", conditionMessage(e),
@@ -372,7 +372,9 @@ read_network <- function(
   node_from <- edge_data[[1L]]
   node_to <- edge_data[[2L]]
   weights <- if (weighted) edge_data[[3L]] else rep(1, nrow(edge_data))
-  if (anyNA(node_from) ||
+  if (!is.numeric(node_from) ||
+      !is.numeric(node_to) ||
+      anyNA(node_from) ||
       anyNA(node_to) ||
       any(!is.finite(node_from)) ||
       any(!is.finite(node_to)) ||

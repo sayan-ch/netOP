@@ -40,3 +40,27 @@ test_that("network edge-list I/O round trips", {
   expect_error(write_network(A, path), "already exists")
   expect_invisible(write_network(A, path, overwrite = TRUE))
 })
+
+test_that("read_network handles unweighted two- and three-column edge lists", {
+  two_column_path <- tempfile(fileext = ".csv")
+  writeLines(c("node_from,node_to", "1,2", "2,3"), two_column_path)
+  two_column <- read_network(
+    two_column_path, representation = "dense", weighted = FALSE
+  )
+  expect_equal(two_column[1, 2], 1)
+  expect_equal(two_column[2, 3], 1)
+
+  three_column_path <- tempfile(fileext = ".csv")
+  writeLines(
+    c("node_from,node_to,weight", "1,2,0.25", "2,3,4"),
+    three_column_path
+  )
+  expect_warning(
+    three_column <- read_network(
+      three_column_path, representation = "dense", weighted = FALSE
+    ),
+    "weight column is present but ignored"
+  )
+  expect_equal(three_column[1, 2], 1)
+  expect_equal(three_column[2, 3], 1)
+})

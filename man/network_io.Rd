@@ -35,8 +35,10 @@ read_network(
 \item{directed}{Optional direction indicator; inferred from metadata or
 symmetry when omitted.}
 
-\item{weighted}{Optional weight indicator; inferred from edge values when
-omitted.}
+\item{weighted}{Optional weight indicator. For \code{read_network()}, \code{FALSE}
+treats a two-column edge list as binary and ignores a third weight column
+with a warning; \code{NULL} infers weighting from the number of columns. For
+\code{write_network()}, \code{NULL} infers weighting from the stored edge values.}
 
 \item{triangle}{For undirected output, which matrix triangle to write.}
 

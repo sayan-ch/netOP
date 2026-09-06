@@ -161,8 +161,10 @@ resolve_network_format <- function(file, format) {
 #' @param file Edge-list file path.
 #' @param directed Optional direction indicator; inferred from metadata or
 #'   symmetry when omitted.
-#' @param weighted Optional weight indicator; inferred from edge values when
-#'   omitted.
+#' @param weighted Optional weight indicator. For `read_network()`, `FALSE`
+#'   treats a two-column edge list as binary and ignores a third weight column
+#'   with a warning; `NULL` infers weighting from the number of columns. For
+#'   `write_network()`, `NULL` infers weighting from the stored edge values.
 #' @param triangle For undirected output, which matrix triangle to write.
 #' @param format Delimited format: `"auto"`, `"csv"`, or `"tsv"`.
 #' @param include_header Whether `write_network()` writes column names.
@@ -356,14 +358,13 @@ read_network <- function(
   }
   if (is.null(weighted)) weighted <- ncol(edge_data) == 3L
   validate_generator_logical(weighted, "weighted")
-  expected_columns <- if (weighted) 3L else 2L
-  if (ncol(edge_data) != expected_columns) {
-    stop(
-      if (weighted) {
-        "Weighted edge lists must contain a third weight column."
-      } else {
-        "Unweighted edge lists must contain exactly two columns."
-      },
+  if (weighted && ncol(edge_data) != 3L) {
+    stop("Weighted edge lists must contain a third weight column.",
+         call. = FALSE)
+  }
+  if (!weighted && ncol(edge_data) == 3L) {
+    warning(
+      "A weight column is present but ignored because weighted = FALSE.",
       call. = FALSE
     )
   }

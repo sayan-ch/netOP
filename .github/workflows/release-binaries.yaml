@@ -1,0 +1,179 @@
+name: Release package artifacts
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag, such as v0.0.0.9000
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  binary:
+    name: ${{ matrix.config.label }} (R ${{ matrix.r }}) binary
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        r: [release, oldrel-1]
+        config:
+          - os: macos-15
+            label: macOS Apple Silicon
+            extension: tgz
+            architecture: arm64
+          - os: macos-15-intel
+            label: macOS Intel
+            extension: tgz
+            architecture: x86_64
+          - os: windows-latest
+            label: Windows x86-64
+            extension: zip
+            architecture: x86_64
+          - os: windows-11-arm
+            label: Windows ARM64
+            extension: zip
+            architecture: arm64
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r }}
+          use-public-rspm: always
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+      - name: Build binary package
+        id: build
+        env:
+          ASSET_ARCHITECTURE: ${{ matrix.config.architecture }}
+          ASSET_EXTENSION: ${{ matrix.config.extension }}
+        run: |
+          metadata <- read.dcf("DESCRIPTION")[1, ]
+          version <- unname(metadata[["Version"]])
+          package <- unname(metadata[["Package"]])
+          tag_version <- sub("^v", "", Sys.getenv("RELEASE_TAG"))
+          if (!identical(tag_version, version)) {
+            stop("Release tag and DESCRIPTION version do not match.")
+          }
+
+          build_library <- tempfile("netop-build-library-")
+          dir.create(build_library)
+          status <- system2(
+            file.path(R.home("bin"), "R"),
+            c(
+              "CMD", "INSTALL", "--build",
+              paste0("--library=", shQuote(build_library)), "."
+            )
+          )
+          if (!identical(status, 0L)) stop("Binary package build failed.")
+
+          extension <- Sys.getenv("ASSET_EXTENSION")
+          built <- sprintf("%s_%s.%s", package, version, extension)
+          r_series <- paste(
+            R.version$major,
+            sub("\\..*$", "", R.version$minor),
+            sep = "."
+          )
+          asset <- sprintf(
+            "%s_%s_R-%s_%s.%s",
+            package,
+            version,
+            r_series,
+            Sys.getenv("ASSET_ARCHITECTURE"),
+            extension
+          )
+          if (!file.rename(built, asset)) stop("Could not rename binary asset.")
+          cat("asset=", asset, "\n", file = Sys.getenv("GITHUB_OUTPUT"),
+              sep = "", append = TRUE)
+        shell: Rscript {0}
+      - name: Test binary package
+        env:
+          BINARY_ASSET: ${{ steps.build.outputs.asset }}
+        run: |
+          library_path <- tempfile("netop-binary-library-")
+          dir.create(library_path)
+          install.packages(
+            Sys.getenv("BINARY_ASSET"),
+            repos = NULL,
+            type = "binary",
+            lib = library_path
+          )
+          loadNamespace("netOP", lib.loc = library_path)
+          A <- netOP::generate_sbm(
+            n = 30, K = 3, alpha = 0.4, beta = 0.1,
+            representation = "sparse", seed = 1, ncores = 1
+          )
+          stopifnot(inherits(A, "sparseMatrix"), identical(dim(A), c(30L, 30L)))
+        shell: Rscript {0}
+      - name: Attach binary to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BINARY_ASSET: ${{ steps.build.outputs.asset }}
+        run: gh release upload "$RELEASE_TAG" "$BINARY_ASSET" --clobber
+        shell: bash
+
+  source:
+    name: Source package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+      - name: Build source package
+        id: build
+        run: |
+          metadata <- read.dcf("DESCRIPTION")[1, ]
+          version <- unname(metadata[["Version"]])
+          package <- unname(metadata[["Package"]])
+          tag_version <- sub("^v", "", Sys.getenv("RELEASE_TAG"))
+          if (!identical(tag_version, version)) {
+            stop("Release tag and DESCRIPTION version do not match.")
+          }
+
+          status <- system2(
+            file.path(R.home("bin"), "R"),
+            c("CMD", "build", ".")
+          )
+          if (!identical(status, 0L)) stop("Source package build failed.")
+          asset <- sprintf("%s_%s.tar.gz", package, version)
+          if (!file.exists(asset)) stop("Source package asset was not created.")
+          cat("asset=", asset, "\n", file = Sys.getenv("GITHUB_OUTPUT"),
+              sep = "", append = TRUE)
+        shell: Rscript {0}
+      - name: Test source package
+        env:
+          SOURCE_ASSET: ${{ steps.build.outputs.asset }}
+        run: |
+          library_path <- tempfile("netop-source-library-")
+          dir.create(library_path)
+          install.packages(
+            Sys.getenv("SOURCE_ASSET"),
+            repos = NULL,
+            type = "source",
+            lib = library_path
+          )
+          loadNamespace("netOP", lib.loc = library_path)
+        shell: Rscript {0}
+      - name: Attach source package to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_ASSET: ${{ steps.build.outputs.asset }}
+        run: gh release upload "$RELEASE_TAG" "$SOURCE_ASSET" --clobber
+        shell: bash

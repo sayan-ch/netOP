@@ -6,15 +6,83 @@
 
 `netOP` provides network generation, estimation, embedding, clustering, and
 model-selection tools for R. It brings together general graph utilities,
-spectral and latent-space methods, SONNET, NETCROP, edge cross-validation
-(ECV), node cross-validation (NCV), and regularization selection.
+spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM and regularization selection.
 
-The development version is distributed through GitHub:
+## Installation
+
+### Binary package (recommended)
+
+Prebuilt binaries are available for R 4.5 and R 4.6 on Apple Silicon and Intel
+macOS, and on ARM64 and x86-64 Windows. The following code selects the matching
+asset and installs netOP without compiling it locally:
+
+```r
+version <- "0.0.0.9000"
+r_series <- paste(R.version$major, sub("\\..*$", "", R.version$minor), sep = ".")
+if (!r_series %in% c("4.5", "4.6")) {
+  stop("The current netOP binary release requires R 4.5.x or R 4.6.x.")
+}
+
+asset <- if (.Platform$OS.type == "windows") {
+  architecture <- if (grepl("arm64|aarch64", R.version$arch)) {
+    "arm64"
+  } else if (R.version$arch == "x86_64") {
+    "x86_64"
+  } else {
+    stop("No netOP binary is available for this Windows architecture.")
+  }
+  sprintf("netOP_%s_R-%s_%s.zip", version, r_series, architecture)
+} else if (Sys.info()[["sysname"]] == "Darwin") {
+  architecture <- if (grepl("arm64|aarch64", R.version$arch)) {
+    "arm64"
+  } else if (R.version$arch == "x86_64") {
+    "x86_64"
+  } else {
+    stop("No netOP binary is available for this macOS architecture.")
+  }
+  sprintf("netOP_%s_R-%s_%s.tgz", version, r_series, architecture)
+} else {
+  stop("Use the source installation instructions below on this platform.")
+}
+
+install.packages(c("cluster", "irlba", "Matrix", "Rcpp", "RSpectra", "tibble"))
+install.packages(
+  sprintf(
+    "https://github.com/sayan-ch/netOP/releases/download/v%s/%s",
+    version,
+    asset
+  ),
+  repos = NULL,
+  type = "binary"
+)
+```
+
+Linux distributions do not share a portable R binary-package format. Each
+GitHub release therefore includes a standard source tarball for Linux and
+other Unix systems. Within the supported macOS and Windows versions, separate
+assets are needed for each R major/minor series and processor architecture;
+ordinary operating-system patch updates do not require another asset.
+
+### Development version
+
+Install the latest development version from GitHub with:
 
 ```r
 install.packages("remotes")
 remotes::install_github("sayan-ch/netOP")
 ```
+
+Because netOP contains C++ code, installing the development or source version
+requires a working package-development toolchain:
+
+- **macOS:** install Apple's Xcode Command Line Tools by running
+  `xcode-select --install` in Terminal.
+- **Windows:** install the version of
+  [Rtools](https://cran.r-project.org/bin/windows/Rtools/) matching your R
+  version.
+- **Linux:** install GNU Make, a C++ compiler, and the R development headers.
+  On Debian or Ubuntu, these are normally provided by `build-essential` and
+  `r-base-dev`.
 
 ## Quick start
 

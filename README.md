@@ -35,9 +35,14 @@ parameters <- get_generator_parameters(A)
 table(parameters$g_true)
 
 embedding <- ase(A, d = 3)
-fit <- spectral_cluster(
+fit <- sonnet(
   A,
   K = 3,
+  num_subnetworks = 2,
+  overlap_size = 50,
+  ncores = 1,
+  seed = 101,
+  verbose = FALSE,
   spectral_engine = "base",
   cluster_engine = "kmeans"
 )

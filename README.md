@@ -120,7 +120,7 @@ citations and see `inst/COPYRIGHTS` for file-level provenance.
 
 ## Implementation Disclosures
 
-* `netOP` provides self-contained wrappers around an ECV (<https://doi.org/10.1093/biomet/asaa00>)
+* `netOP` provides self-contained wrappers around an ECV (<https://doi.org/10.1093/biomet/asaa006>)
 implementation derived from CRAN `randnet` 1.0. Installing or using netOP does not require `randnet`.
 The ECV-specific implementation helpers are internal and are not part of the netOP public API.
 

@@ -189,8 +189,10 @@ estimate_sbm <- function(
     denominator <- denominator + t(denominator)
   }
 
-  B_hat <- numerator / denominator
-  B_hat[denominator == 0] <- NA_real_
+  rho_hat <- Matrix::mean(A)
+  B_hat <- (numerator + 0.01 * rho_hat) / (denominator + 0.01)
+  # B_hat[denominator == 0] <- NA_real_
+
   dimnames(B_hat) <- list(
     paste0("community_", seq_len(K)),
     paste0("community_", seq_len(K))
@@ -275,8 +277,8 @@ estimate_dcbm <- function(
   }
   invalid_spectral_options <- !is.list(spectral_options) ||
     (length(spectral_options) > 0L &&
-     (is.null(names(spectral_options)) ||
-      any(!nzchar(names(spectral_options)))))
+       (is.null(names(spectral_options)) ||
+          any(!nzchar(names(spectral_options)))))
   if (invalid_spectral_options) {
     stop("spectral_options must be a named list.", call. = FALSE)
   }
@@ -343,12 +345,15 @@ estimate_dcbm <- function(
   row_groups <- lapply(seq_len(K), function(k) which(g_row == k))
   col_groups <- lapply(seq_len(K), function(k) which(g_col == k))
 
+  rho_hat <- Matrix::mean(A)
+
   if (method == "plugin") {
     B_hat <- matrix(0, nrow = K, ncol = K)
     for (k in seq_len(K)) {
       for (l in k:K) {
         B_hat[k, l] <- B_hat[l, k] <-
-          sum(A[row_groups[[k]], col_groups[[l]], drop = FALSE]) + stabilizer
+          sum(A[row_groups[[k]], col_groups[[l]], drop = FALSE]) +
+          stabilizer * rho_hat
       }
     }
 

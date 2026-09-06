@@ -13,8 +13,9 @@ spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM a
 ### Binary package (recommended)
 
 Prebuilt binaries are available for R 4.5 and R 4.6 on Apple Silicon and Intel
-macOS, and on ARM64 and x86-64 Windows. The following code selects the matching
-asset and installs netOP without compiling it locally:
+macOS and on x86-64 Windows. Windows ARM64 is supported with R 4.6. The
+following code selects the matching asset and installs netOP without compiling
+it locally:
 
 ```r
 version <- "0.0.0.9000"
@@ -25,6 +26,9 @@ if (!r_series %in% c("4.5", "4.6")) {
 
 asset <- if (.Platform$OS.type == "windows") {
   architecture <- if (grepl("arm64|aarch64", R.version$arch)) {
+    if (r_series != "4.6") {
+      stop("The netOP Windows ARM64 binary requires R 4.6.x.")
+    }
     "arm64"
   } else if (R.version$arch == "x86_64") {
     "x86_64"
@@ -46,12 +50,20 @@ asset <- if (.Platform$OS.type == "windows") {
 }
 
 install.packages(c("cluster", "irlba", "Matrix", "Rcpp", "RSpectra", "tibble"))
+binary_url <- sprintf(
+  "https://github.com/sayan-ch/netOP/releases/download/v%s/%s",
+  version,
+  asset
+)
+binary_directory <- tempfile("netop-binary-")
+dir.create(binary_directory)
+binary_file <- file.path(
+  binary_directory,
+  sprintf("netOP_%s.%s", version, tools::file_ext(asset))
+)
+download.file(binary_url, binary_file, mode = "wb")
 install.packages(
-  sprintf(
-    "https://github.com/sayan-ch/netOP/releases/download/v%s/%s",
-    version,
-    asset
-  ),
+  binary_file,
   repos = NULL,
   type = "binary"
 )

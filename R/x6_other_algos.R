@@ -1793,7 +1793,8 @@ ecv_rdpg_legacy_environment <- local({
 #' @param cv Positive number of edge-sampling folds.
 #' @param nrep Positive number of repeated ECV runs.
 #' @param train_proportion Proportion of dyads retained for training.
-#' @param losses Canonical loss names to evaluate.
+#' @param losses Canonical loss names to evaluate: `"mse"`, `"sse"`,
+#'   `"bin_dev"`, and `"auc_as_loss"`.
 #' @param ncores Positive outer worker count; folds run sequentially.
 #' @param seed Optional nonnegative reproducibility seed.
 #' @param verbose Print progress messages.
@@ -1925,11 +1926,11 @@ ecv_stability_rdpg <- function(
     stop("train_proportion must be strictly between zero and one.",
          call. = FALSE)
   }
-  supported_losses <- c("mse", "bin_dev", "auc_as_loss")
+  supported_losses <- c("mse", "sse", "bin_dev", "auc_as_loss")
   if (!is.character(losses) || length(losses) < 1L || anyNA(losses) ||
       any(!nzchar(losses)) || any(!losses %in% supported_losses)) {
     stop(
-      "losses must contain only mse, bin_dev, and auc_as_loss.",
+      "losses must contain only mse, sse, bin_dev, and auc_as_loss.",
       call. = FALSE
     )
   }
@@ -2001,8 +2002,9 @@ ecv_stability_rdpg <- function(
     status = ram_status
   )
   legacy_losses <- unname(c(
-    mse = "l2", bin_dev = "bin.dev", auc_as_loss = "AUC"
+    mse = "l2", sse = "l2", bin_dev = "bin.dev", auc_as_loss = "AUC"
   )[losses])
+  legacy_losses <- unique(legacy_losses)
   repetition_seeds <- if (is.null(seed)) {
     sample.int(.Machine$integer.max, size = nrep, replace = TRUE)
   } else {
@@ -2033,6 +2035,13 @@ ecv_stability_rdpg <- function(
         "t",
         function(x) {
           if (inherits(x, "Matrix")) Matrix::t(x) else base::t(x)
+        },
+        envir = runtime_environment
+      )
+      assign(
+        "diag",
+        function(x) {
+          if (inherits(x, "Matrix")) Matrix::diag(x) else base::diag(x)
         },
         envir = runtime_environment
       )
@@ -2084,8 +2093,9 @@ ecv_stability_rdpg <- function(
         ncore = 1L,
         seed = repetition_seeds[[repetition]]
       )
+      if ("sse" %in% losses) value$sse_sum <- value$sse * holdout_count
       component_names <- c(
-        mse = "sse", bin_dev = "dev", auc_as_loss = "auc"
+        mse = "sse", sse = "sse_sum", bin_dev = "dev", auc_as_loss = "auc"
       )
       for (loss_name in losses) {
         component <- value[[component_names[[loss_name]]]]
@@ -2159,7 +2169,9 @@ ecv_stability_rdpg <- function(
       call. = FALSE
     )
   }
-  component_names <- c(mse = "sse", bin_dev = "dev", auc_as_loss = "auc")
+  component_names <- c(
+    mse = "sse", sse = "sse_sum", bin_dev = "dev", auc_as_loss = "auc"
+  )
   cv_loss <- do.call(rbind, lapply(valid_output, function(result) {
     do.call(rbind, lapply(losses, function(loss_name) {
       data.frame(

@@ -31,7 +31,8 @@ ecv_stability_rdpg(
 
 \item{train_proportion}{Proportion of dyads retained for training.}
 
-\item{losses}{Canonical loss names to evaluate.}
+\item{losses}{Canonical loss names to evaluate: \code{"mse"}, \code{"sse"},
+\code{"bin_dev"}, and \code{"auc_as_loss"}.}
 
 \item{ncores}{Positive outer worker count; folds run sequentially.}
 

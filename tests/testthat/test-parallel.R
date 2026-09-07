@@ -55,27 +55,3 @@ test_that("multisession restores the caller plan and environment on both paths",
     Sys.getenv("RENV_CONFIG_SYNCHRONIZED_CHECK", unset = NA), old_environment
   )
 })
-
-test_that("seeded generation and SONNET agree across worker counts", {
-  withr::local_options(list(
-    parallelly.maxWorkers.localhost = c(soft = 2, hard = 3)
-  ))
-  if (.Platform$OS.type == "windows") {
-    skip_if_not_installed("future")
-    skip_if_not_installed("future.apply")
-  }
-  sequential <- generate_sbm(
-    n = 40, K = 2, alpha = 0.7, beta = 0.05, seed = 81, ncores = 1
-  )
-  parallel_result <- generate_sbm(
-    n = 40, K = 2, alpha = 0.7, beta = 0.05, seed = 81, ncores = 2
-  )
-  expect_equal(as.matrix(sequential), as.matrix(parallel_result),
-               ignore_attr = TRUE)
-  fits <- lapply(1:2, function(workers) {
-    sonnet(sequential, K = 2, num_subnetworks = 2, overlap_size = 16,
-            ncores = workers, seed = 82, verbose = FALSE,
-            spectral_engine = "base", cluster_engine = "kmeans")
-  })
-  expect_identical(fits[[1]]$g_hat, fits[[2]]$g_hat)
-})

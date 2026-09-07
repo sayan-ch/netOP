@@ -1,5 +1,7 @@
 # netOP
 
+[README](https://github.com/sayan-ch/netOP#readme) | [Dictionary](https://github.com/sayan-ch/netOP/blob/main/dictionary.md)
+
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/sayan-ch/netOP/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sayan-ch/netOP/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
@@ -251,5 +253,5 @@ without altering that algorithm.
 ## Support and development
 
 Report problems at <https://github.com/sayan-ch/netOP/issues>. Contributions
-are welcome under [CONTRIBUTING.md](CONTRIBUTING.md). The package is licensed
+are welcome under [CONTRIBUTING.md](https://github.com/sayan-ch/netOP/blob/main/CONTRIBUTING.md). The package is licensed
 under GPL (>= 2).

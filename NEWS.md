@@ -1,3 +1,8 @@
+# netOP 0.1.1
+
+- Revised package metadata and expanded the method and software citations for
+  the initial CRAN submission.
+
 # netOP 0.1.0
 
 - Converted multiple network analysis methods and helper codes into an installable R

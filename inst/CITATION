@@ -2,10 +2,10 @@ citHeader("To cite netOP or a method implemented by netOP, use the relevant entr
 
 bibentry(
   bibtype = "Manual",
-  title = "Network Operations (netOP): Efficient Tools and Overlapping Partitions based Methods for Large Networks",
+  title = "Network Data Operations and Overlapping Partitions Based Methods for Large Networks",
   author = person("Sayan", "Chakrabarty"),
   year = "2026",
-  note = "R package version 0.1.0",
+  note = "R package version 0.1.1",
   url = "https://github.com/sayan-ch/netOP"
 )
 
@@ -13,7 +13,7 @@ bibentry(
   bibtype = "Article",
   title = "Network Cross-Validation and Model Selection via Subsampling",
   author = c(person("Sayan", "Chakrabarty"),
-             person("Sharmodeep", "Sengupta"),
+             person("Srijan", "Sengupta"),
              person("Yuguo", "Chen")),
   year = "2026",
   journal = "arXiv",
@@ -26,7 +26,7 @@ bibentry(
   bibtype = "Article",
   title = "Subsampling Based Community Detection for Large Networks",
   author = c(person("Sayan", "Chakrabarty"),
-             person("Sharmodeep", "Sengupta"),
+             person("Srijan", "Sengupta"),
              person("Yuguo", "Chen")),
   year = "2025",
   journal = "Statistica Sinica",
@@ -34,4 +34,61 @@ bibentry(
   pages = "1627 -- 1648",
   doi = "10.5705/ss.202022.0108",
   note = "SONNET: Subsampling on Network"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Network Cross-Validation by Edge Sampling",
+  author = c(
+    person("Tianxi", "Li"),
+    person("Elizaveta", "Levina"),
+    person("Ji", "Zhu")
+  ),
+  year = "2020",
+  journal = "Biometrika",
+  volume = "107",
+  number = "2",
+  pages = "257--276",
+  doi = "10.1093/biomet/asaa006",
+  note = "Methodological reference for edge cross-validation"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = paste(
+    "Network Cross-Validation for Determining the Number",
+    "of Communities in Network Data"
+  ),
+  author = c(
+    person("Kehui", "Chen"),
+    person("Jing", "Lei")
+  ),
+  year = "2018",
+  journal = "Journal of the American Statistical Association",
+  volume = "113",
+  number = "521",
+  pages = "241--251",
+  doi = "10.1080/01621459.2016.1246365",
+  note = "Methodological reference for node-based network cross-validation"
+)
+
+bibentry(
+  bibtype = "Manual",
+  title = paste(
+    "randnet: Random Network Model Estimation,",
+    "Selection and Parameter Tuning"
+  ),
+  author = c(
+    person("Tianxi", "Li"),
+    person("Elizeveta", "Levina"),
+    person("Ji", "Zhu"),
+    person("Can M.", "Le")
+  ),
+  year = "2025",
+  note = paste(
+    "R package version 1.0; source of the ECV implementation",
+    "incorporated and adapted in netOP"
+  ),
+  doi = "10.32614/CRAN.package.randnet",
+  url = "https://CRAN.R-project.org/package=randnet"
 )

@@ -4,11 +4,18 @@
 \name{netOP-package}
 \alias{netOP}
 \alias{netOP-package}
-\title{Network Operations (netOP): Efficient Tools and Overlapping Partitions based Methods for Large Networks}
+\title{Network Data Operations and Overlapping Partitions Based Methods for Large Networks}
 \description{
-netOP provides network generators, losses, graph utilities, spectral and
-latent-space embeddings, SBM/DCBM estimators, SONNET scalable clustering,
-and NETCROP, ECV, NCV, and DKEST model-selection workflows.
+Tools for generating, estimating, embedding, clustering, and
+selecting statistical network models. Provides 'SONNET', a scalable
+subsampling-based divide-and-conquer method for community detection
+described by Chakrabarty, Sengupta and Chen (2025)
+\url{doi:10.5705/ss.202022.0108}, and 'NETCROP', an
+overlapping-partition framework for network cross-validation, model
+selection, and regularization tuning described by Chakrabarty, Sengupta
+and Chen (2026) \url{doi:10.48550/arXiv.2504.06903}. Also includes
+network generators, estimators, spectral and latent-space methods,
+embedders, loss functions, and supporting network-analysis utilities.
 }
 \details{
 The package is licensed GPL (>= 2). Its internal ECV implementation is

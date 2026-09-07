@@ -33,11 +33,52 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::roxygen2
+          extra-packages: any::rcmdcheck, roxygen2@8.0.0, Rcpp@1.1.2
           needs: check
-      - name: Regenerate documentation
-        run: roxygen2::roxygenise()
+      - name: Verify generated interfaces and documentation
+        run: |
+          stopifnot(packageVersion("roxygen2") == "8.0.0")
+          stopifnot(packageVersion("Rcpp") == "1.1.2")
+          Rcpp::compileAttributes()
+          roxygen2::roxygenise()
         shell: Rscript {0}
+      - name: Reject generated-file drift
+        run: |
+          git diff --exit-code -- DESCRIPTION NAMESPACE R/RcppExports.R src/RcppExports.cpp man
+          test -z "$(git status --porcelain -- DESCRIPTION NAMESPACE R/RcppExports.R src/RcppExports.cpp man)"
+        shell: bash
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          error-on: '"warning"'
+
+  minimum-r:
+    name: Minimum R 4.1.0 (compatible CRAN snapshot)
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_CRAN_INCOMING_REMOTE_: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.1.0'
+          use-public-rspm: false
+          cran: https://packagemanager.posit.co/cran/2023-04-01
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          dependencies: '"all"'
+          needs: check
+      - name: Record minimum-R environment
+        run: |
+          stopifnot(getRversion() == "4.1.0")
+          print(getOption("repos"))
+          print(installed.packages()[, c("Package", "Version")])
+          sessionInfo()
+        shell: Rscript {0}
+      # Check committed generated files; modern generators need newer R.
       - uses: r-lib/actions/check-r-package@v2
         with:
           error-on: '"warning"'

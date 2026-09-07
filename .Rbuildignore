@@ -15,3 +15,4 @@
 ^LICENSE\.note$
 ^local-release-assets$
 ^cran-comments\.md$
+^DEVELOPMENT\.md$

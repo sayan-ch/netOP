@@ -42,7 +42,8 @@ Suggests:
     pkgdown,
     ps,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0

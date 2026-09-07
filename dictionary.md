@@ -31,9 +31,16 @@ netOP/
 ├── inst/COPYRIGHTS           File-level licensing/provenance inventory
 ├── inst/LICENSE.note         Installed copy of the upstream-code notice
 ├── README.md, NEWS.md        User-facing package and release documentation
-├── CONVENTIONS.md            Mandatory naming and implementation rules
+├── CONTRIBUTING.md           Tracked contribution and naming rules
+├── DEVELOPMENT.md            Check and draft-release procedures
+├── .github/workflows/        Current/minimum-R checks and manual release builds
+├── .github/scripts/          Release validation against installed packages
 └── dictionary.md             This living function reference
 ```
+
+The parallel regression tests use the suggested `withr` package to restore
+test-local options. The tiny two-worker probes allow a 200% soft CPU limit on
+single-core runners; production worker limits are unchanged.
 
 ## Shared argument conventions
 
@@ -72,6 +79,13 @@ help topics contain the installed signatures and argument defaults. Package
 loading resolves source relationships, so no user sourcing order or
 `sourceCpp()` call is required. Compiled wrappers use registered symbols and
 fall back through their documented R-facing functions.
+
+## `netOP-package.R`
+
+`sum(..., na.rm = FALSE)` is an exported wrapper around `base::sum()` and
+returns the scalar sum, with Matrix method dispatch for sparse matrices.
+`mean`, `diag`, `rowMeans`, `rowSums`, `colMeans`, and `colSums` are Matrix
+re-exports. Their shared help includes return shapes and a sparse example.
 
 ## `01_basic_helpers.R`
 

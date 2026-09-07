@@ -18,8 +18,23 @@ sum(..., na.rm = FALSE)
 
 \item{na.rm}{Whether missing values should be removed by \code{\link[=sum]{sum()}}.}
 }
+\value{
+\code{sum()} and \code{mean()} return a numeric scalar. \code{diag()} returns
+the diagonal vector of a matrix. \code{rowMeans()} and \code{rowSums()} return
+one value per row; \code{colMeans()} and \code{colSums()} return one per column.
+See the corresponding Matrix help for other supported inputs.
+}
 \description{
-These generics are re-exported from Matrix so that common summary
-operations dispatch correctly for sparse network matrices after loading
-netOP.
+The functions \code{mean()}, \code{diag()}, \code{rowMeans()}, \code{rowSums()}, \code{colMeans()},
+and \code{colSums()} are re-exported from Matrix. The \code{sum()} wrapper delegates
+to \code{\link[base:sum]{base::sum()}}, which dispatches to Matrix methods for sparse inputs.
+These functions support common summaries of sparse network matrices.
+}
+\examples{
+A <- Matrix::Matrix(matrix(c(0, 1, 1, 0), nrow = 2), sparse = TRUE)
+sum(A)
+mean(A)
+diag(A)
+rowSums(A)
+colMeans(A)
 }

@@ -1,5 +1,6 @@
 .Rproj.user
 .DS_Store
+**/.DS_Store
 .Rhistory
 *.Rcheck/
 *.tar.gz
@@ -17,3 +18,4 @@ AUDIT.md
 library_functions/
 workplan.md
 local-release-assets/
+CONVENTIONS.md

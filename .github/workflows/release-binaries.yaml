@@ -1,24 +1,52 @@
 name: Release package artifacts
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag, such as v0.1.0
+        description: Existing draft release tag, such as v0.1.1
         required: true
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 env:
-  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  RELEASE_TAG: ${{ inputs.tag }}
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
+# A main-branch push or publishing a draft must never start another build.
+concurrency:
+  group: release-artifacts-${{ inputs.tag }}
+  cancel-in-progress: false
+
 jobs:
+  preflight:
+    name: Verify draft and freeze source commit
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - name: Require an existing empty draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,assets > release.json
+          python3 - <<'PYTHON'
+          import json
+          release = json.load(open("release.json"))
+          if not release["isDraft"] or release["assets"]:
+              raise SystemExit("Use an existing empty draft; published assets are never overwritten.")
+          PYTHON
+        shell: bash
+      - id: source
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        shell: bash
   binary:
+    needs: [preflight, source]
     name: ${{ matrix.label }} (R ${{ matrix.r }}) binary
     runs-on: ${{ matrix.os }}
     strategy:
@@ -97,14 +125,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.preflight.outputs.commit }}
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.r }}
           use-public-rspm: always
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          dependencies: '"hard"'
+          dependencies: '"all"'
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: source-bundle
       - name: Build binary package
         id: build
         env:
@@ -113,6 +145,7 @@ jobs:
           ASSET_R_SERIES: ${{ matrix.r_series }}
           EXPECTED_PACKAGE_TYPE: ${{ matrix.package_type }}
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_target }}
+          SOURCE_ASSET: source-bundle/${{ needs.source.outputs.asset }}
         run: |
           actual_architecture <- tolower(R.version$arch)
           expected_architecture <- Sys.getenv("ASSET_ARCHITECTURE")
@@ -162,7 +195,8 @@ jobs:
             file.path(R.home("bin"), "R"),
             c(
               "CMD", "INSTALL", "--build",
-              paste0("--library=", shQuote(build_library)), "."
+              paste0("--library=", shQuote(build_library)),
+              shQuote(Sys.getenv("SOURCE_ASSET"))
             )
           )
           if (!identical(status, 0L)) stop("Binary package build failed.")
@@ -227,45 +261,34 @@ jobs:
             type = "binary",
             lib = library_path
           )
-          loadNamespace("netOP", lib.loc = library_path)
-          stopifnot(
-            identical(
-              as.character(utils::packageVersion("netOP", lib.loc = library_path)),
-              version
-            )
-          )
-          compiled_result <- getFromNamespace("outer_add_cpp", "netOP")(
-            c(1, 2), c(3, 4)
-          )
-          stopifnot(
-            isTRUE(all.equal(compiled_result, matrix(c(4, 5, 5, 6), nrow = 2)))
-          )
-          A <- netOP::generate_sbm(
-            n = 30, K = 3, alpha = 0.4, beta = 0.1,
-            representation = "sparse", seed = 1, ncores = 1
-          )
-          stopifnot(inherits(A, "sparseMatrix"), identical(dim(A), c(30L, 30L)))
+          .libPaths(c(library_path, .libPaths()))
+          source(".github/scripts/test-installed.R", local = TRUE)
         shell: Rscript {0}
-      - name: Attach binary to GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BINARY_ASSET: ${{ steps.build.outputs.asset }}
-        run: gh release upload "$RELEASE_TAG" "$BINARY_ASSET" --clobber
-        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.r_series }}-${{ matrix.architecture }}-${{ matrix.extension }}
+          path: ${{ steps.build.outputs.asset }}
+          if-no-files-found: error
 
   source:
+    needs: preflight
+    outputs:
+      asset: ${{ steps.build.outputs.asset }}
     name: Source package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.preflight.outputs.commit }}
       - uses: r-lib/actions/setup-pandoc@v2
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: release
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          dependencies: '"all"'
       - name: Build source package
         id: build
         run: |
@@ -287,42 +310,48 @@ jobs:
           cat("asset=", asset, "\n", file = Sys.getenv("GITHUB_OUTPUT"),
               sep = "", append = TRUE)
         shell: Rscript {0}
-      - name: Test source package
+      - name: Check source package
         env:
           SOURCE_ASSET: ${{ steps.build.outputs.asset }}
         run: |
-          metadata <- read.dcf("DESCRIPTION")[1, ]
-          version <- unname(metadata[["Version"]])
-          library_path <- tempfile("netop-source-library-")
-          dir.create(library_path)
-          install.packages(
-            Sys.getenv("SOURCE_ASSET"),
-            repos = NULL,
-            type = "source",
-            lib = library_path
+          rcmdcheck::rcmdcheck(
+            Sys.getenv("SOURCE_ASSET"), args = c("--as-cran", "--no-manual"),
+            error_on = "warning", check_dir = "check"
           )
-          loadNamespace("netOP", lib.loc = library_path)
-          stopifnot(
-            identical(
-              as.character(utils::packageVersion("netOP", lib.loc = library_path)),
-              version
-            )
-          )
-          compiled_result <- getFromNamespace("outer_add_cpp", "netOP")(
-            c(1, 2), c(3, 4)
-          )
-          stopifnot(
-            isTRUE(all.equal(compiled_result, matrix(c(4, 5, 5, 6), nrow = 2)))
-          )
-          A <- netOP::generate_sbm(
-            n = 30, K = 3, alpha = 0.4, beta = 0.1,
-            representation = "sparse", seed = 1, ncores = 1
-          )
-          stopifnot(inherits(A, "sparseMatrix"), identical(dim(A), c(30L, 30L)))
         shell: Rscript {0}
-      - name: Attach source package to GitHub release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          path: ${{ steps.build.outputs.asset }}
+          if-no-files-found: error
+
+  attach:
+    name: Attach complete validated set to draft
+    needs: [preflight, source, binary]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.preflight.outputs.commit }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify complete asset set and calculate checksums
+        run: python3 .github/scripts/verify-release-assets.py
+      - name: Attach assets to the still-empty draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SOURCE_ASSET: ${{ steps.build.outputs.asset }}
-        run: gh release upload "$RELEASE_TAG" "$SOURCE_ASSET" --clobber
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,assets > release.json
+          python3 - <<'PYTHON'
+          import json
+          release = json.load(open("release.json"))
+          if not release["isDraft"] or release["assets"]:
+              raise SystemExit("The release must remain an empty draft until attachment.")
+          PYTHON
+          gh release upload "$RELEASE_TAG" release-assets/*
         shell: bash

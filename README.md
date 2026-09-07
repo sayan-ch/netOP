@@ -14,13 +14,15 @@ spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM a
 
 ### Binary package (recommended)
 
-Prebuilt binaries are available for R 4.4, R 4.5, and R 4.6 on Apple Silicon
-and Intel macOS and on x86-64 Windows. The following code selects the matching
+The planned 0.1.1 release provides binaries for R 4.4, R 4.5, and R 4.6 on
+Apple Silicon and Intel macOS and on x86-64 Windows. Until that release is
+published, use the development installation below or select version 0.1.0
+in the binary installer. The following code selects the matching
 asset and installs netOP without compiling it locally:
 
 ```r
 local({
-  version <- "0.1.0"
+  version <- "0.1.1"
   r_series <- paste(
     R.version$major,
     sub("\\..*$", "", R.version$minor),
@@ -97,14 +99,15 @@ other Unix systems. Within the supported macOS and Windows versions, separate
 assets are needed for each R major/minor series and processor architecture;
 ordinary operating-system patch updates do not require another asset.
 
-Install the released source package on Linux or another Unix-like system with:
+After 0.1.1 is published, install its released source package on Linux or
+another Unix-like system with:
 
 ```r
 install.packages(
   c("cluster", "irlba", "Matrix", "Rcpp", "RcppEigen", "RSpectra", "tibble")
 )
 install.packages(
-  "https://github.com/sayan-ch/netOP/releases/download/v0.1.0/netOP_0.1.0.tar.gz",
+  "https://github.com/sayan-ch/netOP/releases/download/v0.1.1/netOP_0.1.1.tar.gz",
   repos = NULL,
   type = "source"
 )
@@ -181,9 +184,10 @@ summary(selection)
 plot(selection)
 ```
 
-Generators use sparse output by default where supported. `netOP` re-exports
+Generators use sparse output by default where supported. `netOP` exposes
 `mean()`, `sum()`, `diag()`, `rowMeans()`, `rowSums()`, `colMeans()`, and
-`colSums()` from Matrix, so these familiar operations dispatch correctly for
+`colSums()` for sparse networks (six Matrix re-exports and a `sum()` wrapper
+around `base::sum()`), so these familiar operations dispatch correctly for
 sparse networks after `library(netOP)`. Use `representation = "dense"` only
 when a dense matrix is required by a downstream workflow. Generator truth and
 settings can be recovered with `get_generator_parameters()` as shown above.

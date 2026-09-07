@@ -12,68 +12,103 @@ spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM a
 
 ### Binary package (recommended)
 
-Prebuilt binaries are available for R 4.5 and R 4.6 on Apple Silicon and Intel
-macOS and on x86-64 Windows. Windows ARM64 is supported with R 4.6. The
-following code selects the matching asset and installs netOP without compiling
-it locally:
+Prebuilt binaries are available for R 4.4, R 4.5, and R 4.6 on Apple Silicon
+and Intel macOS and on x86-64 Windows. The following code selects the matching
+asset and installs netOP without compiling it locally:
 
 ```r
-version <- "0.0.0.9000"
-r_series <- paste(R.version$major, sub("\\..*$", "", R.version$minor), sep = ".")
-if (!r_series %in% c("4.5", "4.6")) {
-  stop("The current netOP binary release requires R 4.5.x or R 4.6.x.")
-}
+local({
+  version <- "0.1.0"
+  r_series <- paste(
+    R.version$major,
+    sub("\\..*$", "", R.version$minor),
+    sep = "."
+  )
+  if (!r_series %in% c("4.4", "4.5", "4.6")) {
+    stop(
+      "The current netOP binary release requires R 4.4.x, R 4.5.x, or R 4.6.x."
+    )
+  }
 
-asset <- if (.Platform$OS.type == "windows") {
-  architecture <- if (grepl("arm64|aarch64", R.version$arch)) {
-    if (r_series != "4.6") {
-      stop("The netOP Windows ARM64 binary requires R 4.6.x.")
+  r_architecture <- tolower(R.version$arch)
+  asset <- if (.Platform$OS.type == "windows") {
+    architecture <- if (identical(r_architecture, "x86_64")) {
+      "x86_64"
+    } else {
+      stop(
+        "No native netOP binary is available for this Windows R architecture. ",
+        "On Windows ARM64, use the x86-64 build of R or install netOP from source."
+      )
     }
-    "arm64"
-  } else if (R.version$arch == "x86_64") {
-    "x86_64"
+    sprintf("netOP_%s_R-%s_%s.zip", version, r_series, architecture)
+  } else if (identical(Sys.info()[["sysname"]], "Darwin")) {
+    architecture <- if (grepl("arm64|aarch64", r_architecture)) {
+      "arm64"
+    } else if (identical(r_architecture, "x86_64")) {
+      "x86_64"
+    } else {
+      stop("No netOP binary is available for this macOS architecture.")
+    }
+    sprintf("netOP_%s_R-%s_%s.tgz", version, r_series, architecture)
   } else {
-    stop("No netOP binary is available for this Windows architecture.")
+    stop("Use the source installation instructions below on this platform.")
   }
-  sprintf("netOP_%s_R-%s_%s.zip", version, r_series, architecture)
-} else if (Sys.info()[["sysname"]] == "Darwin") {
-  architecture <- if (grepl("arm64|aarch64", R.version$arch)) {
-    "arm64"
-  } else if (R.version$arch == "x86_64") {
-    "x86_64"
-  } else {
-    stop("No netOP binary is available for this macOS architecture.")
-  }
-  sprintf("netOP_%s_R-%s_%s.tgz", version, r_series, architecture)
-} else {
-  stop("Use the source installation instructions below on this platform.")
-}
 
-install.packages(c("cluster", "irlba", "Matrix", "Rcpp", "RSpectra", "tibble"))
-binary_url <- sprintf(
-  "https://github.com/sayan-ch/netOP/releases/download/v%s/%s",
-  version,
-  asset
-)
-binary_directory <- tempfile("netop-binary-")
-dir.create(binary_directory)
-binary_file <- file.path(
-  binary_directory,
-  sprintf("netOP_%s.%s", version, tools::file_ext(asset))
-)
-download.file(binary_url, binary_file, mode = "wb")
-install.packages(
-  binary_file,
-  repos = NULL,
-  type = "binary"
-)
+  cran_repository <- getOption("repos")[["CRAN"]]
+  if (is.null(cran_repository) || is.na(cran_repository) ||
+      identical(cran_repository, "@CRAN@")) {
+    cran_repository <- "https://cloud.r-project.org"
+  }
+  install.packages(
+    c("cluster", "irlba", "Matrix", "Rcpp", "RcppEigen", "RSpectra", "tibble"),
+    repos = cran_repository
+  )
+
+  binary_url <- sprintf(
+    "https://github.com/sayan-ch/netOP/releases/download/v%s/%s",
+    version,
+    asset
+  )
+  binary_directory <- tempfile("netop-binary-")
+  dir.create(binary_directory)
+  on.exit(unlink(binary_directory, recursive = TRUE), add = TRUE)
+  binary_file <- file.path(
+    binary_directory,
+    sprintf("netOP_%s.%s", version, tools::file_ext(asset))
+  )
+  download_status <- download.file(binary_url, binary_file, mode = "wb")
+  if (!identical(download_status, 0L) || !file.exists(binary_file) ||
+      file.info(binary_file)$size <= 0) {
+    stop("The netOP binary could not be downloaded.")
+  }
+  install.packages(binary_file, repos = NULL, type = "binary")
+})
 ```
+
+The R 4.4 and R 4.5 Apple Silicon binaries and all Intel binaries target macOS
+11 or newer. The R 4.6 Apple Silicon binary follows the official R 4.6 runtime
+and requires macOS 14 or newer.
 
 Linux distributions do not share a portable R binary-package format. Each
 GitHub release therefore includes a standard source tarball for Linux and
 other Unix systems. Within the supported macOS and Windows versions, separate
 assets are needed for each R major/minor series and processor architecture;
 ordinary operating-system patch updates do not require another asset.
+
+Install the released source package on Linux or another Unix-like system with:
+
+```r
+install.packages(
+  c("cluster", "irlba", "Matrix", "Rcpp", "RcppEigen", "RSpectra", "tibble")
+)
+install.packages(
+  "https://github.com/sayan-ch/netOP/releases/download/v0.1.0/netOP_0.1.0.tar.gz",
+  repos = NULL,
+  type = "source"
+)
+```
+
+Compiling the source package requires the development tools described below.
 
 ### Development version
 

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag, such as v0.0.0.9000
+        description: Existing release tag, such as v0.1.0
         required: true
         type: string
 
@@ -25,41 +25,75 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - r: '4.6'
+          - r: '4.6.1'
+            r_series: '4.6'
             os: macos-15
             label: macOS Apple Silicon
             extension: tgz
             architecture: arm64
-          - r: '4.5'
+            package_type: mac.binary.sonoma-arm64
+            macos_target: '14.0'
+          - r: '4.5.3'
+            r_series: '4.5'
             os: macos-15
             label: macOS Apple Silicon
             extension: tgz
             architecture: arm64
-          - r: '4.6'
-            os: macos-15-intel
-            label: macOS Intel
+            package_type: mac.binary.big-sur-arm64
+            macos_target: '11.0'
+          - r: '4.4.3'
+            r_series: '4.4'
+            os: macos-15
+            label: macOS Apple Silicon
             extension: tgz
-            architecture: x86_64
-          - r: '4.5'
-            os: macos-15-intel
-            label: macOS Intel
-            extension: tgz
-            architecture: x86_64
-          - r: '4.6'
-            os: windows-latest
-            label: Windows x86-64
-            extension: zip
-            architecture: x86_64
-          - r: '4.5'
-            os: windows-latest
-            label: Windows x86-64
-            extension: zip
-            architecture: x86_64
-          - r: '4.6'
-            os: windows-11-arm
-            label: Windows ARM64
-            extension: zip
             architecture: arm64
+            package_type: mac.binary.big-sur-arm64
+            macos_target: '11.0'
+          - r: '4.6.1'
+            r_series: '4.6'
+            os: macos-15-intel
+            label: macOS Intel
+            extension: tgz
+            architecture: x86_64
+            package_type: mac.binary.big-sur-x86_64
+            macos_target: '11.0'
+          - r: '4.5.3'
+            r_series: '4.5'
+            os: macos-15-intel
+            label: macOS Intel
+            extension: tgz
+            architecture: x86_64
+            package_type: mac.binary.big-sur-x86_64
+            macos_target: '11.0'
+          - r: '4.4.3'
+            r_series: '4.4'
+            os: macos-15-intel
+            label: macOS Intel
+            extension: tgz
+            architecture: x86_64
+            package_type: mac.binary.big-sur-x86_64
+            macos_target: '11.0'
+          - r: '4.6.1'
+            r_series: '4.6'
+            os: windows-latest
+            label: Windows x86-64
+            extension: zip
+            architecture: x86_64
+            package_type: win.binary
+          - r: '4.5.3'
+            r_series: '4.5'
+            os: windows-latest
+            label: Windows x86-64
+            extension: zip
+            architecture: x86_64
+            package_type: win.binary
+          - r: '4.4.3'
+            r_series: '4.4'
+            os: windows-latest
+            label: Windows x86-64
+            extension: zip
+            architecture: x86_64
+            package_type: win.binary
     steps:
       - uses: actions/checkout@v5
         with:
@@ -76,7 +110,44 @@ jobs:
         env:
           ASSET_ARCHITECTURE: ${{ matrix.architecture }}
           ASSET_EXTENSION: ${{ matrix.extension }}
+          ASSET_R_SERIES: ${{ matrix.r_series }}
+          EXPECTED_PACKAGE_TYPE: ${{ matrix.package_type }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_target }}
         run: |
+          actual_architecture <- tolower(R.version$arch)
+          expected_architecture <- Sys.getenv("ASSET_ARCHITECTURE")
+          architecture_matches <- switch(
+            expected_architecture,
+            arm64 = grepl("arm64|aarch64", actual_architecture),
+            x86_64 = identical(actual_architecture, "x86_64"),
+            FALSE
+          )
+          if (!architecture_matches) {
+            stop(
+              "Runner architecture mismatch: expected ", expected_architecture,
+              ", found ", actual_architecture, "."
+            )
+          }
+
+          actual_r_series <- paste(
+            R.version$major,
+            sub("\\..*$", "", R.version$minor),
+            sep = "."
+          )
+          if (!identical(actual_r_series, Sys.getenv("ASSET_R_SERIES"))) {
+            stop(
+              "R series mismatch: expected ", Sys.getenv("ASSET_R_SERIES"),
+              ", found ", actual_r_series, "."
+            )
+          }
+          if (!identical(.Platform$pkgType, Sys.getenv("EXPECTED_PACKAGE_TYPE"))) {
+            stop(
+              "Package type mismatch: expected ",
+              Sys.getenv("EXPECTED_PACKAGE_TYPE"), ", found ",
+              .Platform$pkgType, "."
+            )
+          }
+
           metadata <- read.dcf("DESCRIPTION")[1, ]
           version <- unname(metadata[["Version"]])
           package <- unname(metadata[["Package"]])
@@ -115,6 +186,25 @@ jobs:
           cat("asset=", asset, "\n", file = Sys.getenv("GITHUB_OUTPUT"),
               sep = "", append = TRUE)
         shell: Rscript {0}
+      - name: Verify macOS deployment target
+        if: runner.os == 'macOS'
+        env:
+          BINARY_ASSET: ${{ steps.build.outputs.asset }}
+          EXPECTED_MACOS_TARGET: ${{ matrix.macos_target }}
+        run: |
+          inspection_directory="$(mktemp -d)"
+          trap 'rm -rf "$inspection_directory"' EXIT
+          tar -xzf "$BINARY_ASSET" -C "$inspection_directory"
+          shared_object="$inspection_directory/netOP/libs/netOP.so"
+          actual_target="$(
+            otool -l "$shared_object" |
+              awk '/LC_BUILD_VERSION/{found=1; next} found && $1=="minos"{print $2; exit}'
+          )"
+          if [[ "$actual_target" != "$EXPECTED_MACOS_TARGET" ]]; then
+            echo "Expected macOS target $EXPECTED_MACOS_TARGET; found $actual_target."
+            exit 1
+          fi
+        shell: bash
       - name: Test binary package
         env:
           BINARY_ASSET: ${{ steps.build.outputs.asset }}
@@ -138,6 +228,18 @@ jobs:
             lib = library_path
           )
           loadNamespace("netOP", lib.loc = library_path)
+          stopifnot(
+            identical(
+              as.character(utils::packageVersion("netOP", lib.loc = library_path)),
+              version
+            )
+          )
+          compiled_result <- getFromNamespace("outer_add_cpp", "netOP")(
+            c(1, 2), c(3, 4)
+          )
+          stopifnot(
+            isTRUE(all.equal(compiled_result, matrix(c(4, 5, 5, 6), nrow = 2)))
+          )
           A <- netOP::generate_sbm(
             n = 30, K = 3, alpha = 0.4, beta = 0.1,
             representation = "sparse", seed = 1, ncores = 1
@@ -189,6 +291,8 @@ jobs:
         env:
           SOURCE_ASSET: ${{ steps.build.outputs.asset }}
         run: |
+          metadata <- read.dcf("DESCRIPTION")[1, ]
+          version <- unname(metadata[["Version"]])
           library_path <- tempfile("netop-source-library-")
           dir.create(library_path)
           install.packages(
@@ -198,6 +302,23 @@ jobs:
             lib = library_path
           )
           loadNamespace("netOP", lib.loc = library_path)
+          stopifnot(
+            identical(
+              as.character(utils::packageVersion("netOP", lib.loc = library_path)),
+              version
+            )
+          )
+          compiled_result <- getFromNamespace("outer_add_cpp", "netOP")(
+            c(1, 2), c(3, 4)
+          )
+          stopifnot(
+            isTRUE(all.equal(compiled_result, matrix(c(4, 5, 5, 6), nrow = 2)))
+          )
+          A <- netOP::generate_sbm(
+            n = 30, K = 3, alpha = 0.4, beta = 0.1,
+            representation = "sparse", seed = 1, ncores = 1
+          )
+          stopifnot(inherits(A, "sparseMatrix"), identical(dim(A), c(30L, 30L)))
         shell: Rscript {0}
       - name: Attach source package to GitHub release
         env:

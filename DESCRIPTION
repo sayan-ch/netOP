@@ -1,6 +1,6 @@
 Package: netOP
 Title: Network Operations (netOP): Efficient Tools and Overlapping Partitions Based Methods for Large Networks
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Sayan", "Chakrabarty", , "sayanc@umich.edu",
            role = c("aut", "cre"),

@@ -1,4 +1,4 @@
-# netOP 0.0.0.9000
+# netOP 0.1.0
 
 - Converted multiple network analysis methods and helper codes into an installable R
   package with registered Rcpp interfaces and curated exports.

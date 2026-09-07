@@ -17,8 +17,13 @@ stopifnot(all(
   c("getting-started", "choosing-a-method") %in% articles[, "Item"]
 ))
 
-testthat::test_dir(
-  "tests/testthat", reporter = "summary",
-  stop_on_failure = TRUE, stop_on_warning = TRUE
+# Plotting tests need a device but must not leave Rplots.pdf in the checkout.
+grDevices::pdf(file = NULL)
+tryCatch(
+  testthat::test_dir(
+    "tests/testthat", reporter = "summary",
+    stop_on_failure = TRUE, stop_on_warning = TRUE
+  ),
+  finally = grDevices::dev.off()
 )
 print(sessionInfo())

@@ -1,0 +1,20 @@
+# .github/pkg.lock
+{
+  "version": 1,
+  "lockfile_version": 1,
+  "packages": {
+    "irlba": {
+      "package": "irlba",
+      "version": "2.3.7",
+      "type": "binary"
+    },
+    "RSpectra": {
+      "package": "RSpectra",
+      "type": "binary"
+    },
+    "Matrix": {
+      "package": "Matrix",
+      "type": "binary"
+    }
+  }
+}

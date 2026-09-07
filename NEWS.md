@@ -10,3 +10,7 @@
   vignette, pkgdown configuration, and cross-platform R CMD check workflows.
 - Licensed the package as GPL (>= 2) and documented randnet-derived ECV
   provenance.
+- Made CLARA the configurable default clustering backend for NETCROP
+  regularizer tuning. `oracle_plotter()` now derives a common candidate grid
+  from tuner outcomes, diagnoses mismatched grids, and includes separate
+  SONNET and spectral-clustering `tau = 0` baselines by default.

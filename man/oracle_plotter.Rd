@@ -7,7 +7,6 @@
 oracle_plotter(
   A,
   g_true,
-  tau_candidates,
   K = NULL,
   netcrop_outcomes = NULL,
   dkest_outcomes = NULL,
@@ -15,6 +14,8 @@ oracle_plotter(
   include_netcrop_mode = TRUE,
   losses = NULL,
   engines = c("sonnet", "spectral_cluster"),
+  include_sonnet_tau_zero = TRUE,
+  include_spectral_tau_zero = TRUE,
   matching_method = c("greedy", "hungarian", "brute_force"),
   confirm_large = NULL,
   sonnet_options = list(),
@@ -31,12 +32,11 @@ oracle_plotter(
 
 \item{g_true}{Ground-truth labels or a list matching \code{A}.}
 
-\item{tau_candidates}{Unique finite nonnegative regularization candidates.}
-
 \item{K}{Optional fixed number of communities; inferred from \code{g_true} when
 omitted.}
 
-\item{netcrop_outcomes, dkest_outcomes}{Optional matching tuner results.}
+\item{netcrop_outcomes, dkest_outcomes}{Matching tuner results. At least one
+must be supplied; lists must contain one outcome per network.}
 
 \item{include_netcrop_mean, include_netcrop_mode}{Include NETCROP repetition
 summaries in addition to its first repetition.}
@@ -44,6 +44,10 @@ summaries in addition to its first repetition.}
 \item{losses}{Optional NETCROP loss names to include.}
 
 \item{engines}{Fit \code{"sonnet"}, \code{"spectral_cluster"}, or both.}
+
+\item{include_sonnet_tau_zero, include_spectral_tau_zero}{Add a separate
+unregularized baseline for the corresponding engine. These evaluations
+default to \code{TRUE} and do not affect the tuner-derived oracle grid.}
 
 \item{matching_method}{Label-alignment method used for accuracy.}
 
@@ -74,19 +78,28 @@ Evaluates SONNET, spectral clustering, or both against known community
 labels over candidate regularizers.
 }
 \details{
-Optional NETCROP and DKEST results add their selected regularizers to the
-comparison, including off-grid values. Accuracy is one minus the validated
-label-matching mismatch rate; multiple networks are summarized with means
-and standard deviations.
+The oracle candidate grid is obtained from the supplied NETCROP and DKEST
+outcomes. If their grids differ, the function warns and uses their
+floating-point-tolerant intersection; an empty intersection is an error.
+Selected off-grid values are still evaluated. Optional engine-specific
+\code{tau = 0} baselines do not expand the grid used to define the oracle.
+Accuracy is one minus the validated label-matching mismatch rate; multiple
+networks are summarized with means and standard deviations.
 }
 \examples{
 \donttest{
 A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
                   seed = 41, ncores = 1)
 truth <- get_generator_parameters(A)$g_true
+netcrop_fit <- netcrop_tune_regularizer(
+  A, K = 3, tau_candidates = c(0, 0.1),
+  num_subnetworks = 2, overlap_size = 20,
+  nrep = 1, ncores = 1, seed = 42, verbose = FALSE
+)
 oracle_plotter(
-  A, g_true = truth, tau_candidates = c(0, 0.1), K = 3,
-  engines = "spectral_cluster", ncores = 1, seed = 42,
+  A, g_true = truth, K = 3,
+  netcrop_outcomes = netcrop_fit,
+  engines = "spectral_cluster", ncores = 1, seed = 43,
   verbose = FALSE,
   spectral_cluster_options = list(spectral_engine = "base")
 )

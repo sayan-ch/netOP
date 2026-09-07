@@ -3581,21 +3581,27 @@ mult_reg_sonnet <- function(
 #' labels over candidate regularizers.
 #'
 #' @details
-#' Optional NETCROP and DKEST results add their selected regularizers to the
-#' comparison, including off-grid values. Accuracy is one minus the validated
-#' label-matching mismatch rate; multiple networks are summarized with means
-#' and standard deviations.
+#' The oracle candidate grid is obtained from the supplied NETCROP and DKEST
+#' outcomes. If their grids differ, the function warns and uses their
+#' floating-point-tolerant intersection; an empty intersection is an error.
+#' Selected off-grid values are still evaluated. Optional engine-specific
+#' `tau = 0` baselines do not expand the grid used to define the oracle.
+#' Accuracy is one minus the validated label-matching mismatch rate; multiple
+#' networks are summarized with means and standard deviations.
 #'
 #' @param A One adjacency matrix or a list matching `g_true`.
 #' @param g_true Ground-truth labels or a list matching `A`.
-#' @param tau_candidates Unique finite nonnegative regularization candidates.
 #' @param K Optional fixed number of communities; inferred from `g_true` when
 #'   omitted.
-#' @param netcrop_outcomes,dkest_outcomes Optional matching tuner results.
+#' @param netcrop_outcomes,dkest_outcomes Matching tuner results. At least one
+#'   must be supplied; lists must contain one outcome per network.
 #' @param include_netcrop_mean,include_netcrop_mode Include NETCROP repetition
 #'   summaries in addition to its first repetition.
 #' @param losses Optional NETCROP loss names to include.
 #' @param engines Fit `"sonnet"`, `"spectral_cluster"`, or both.
+#' @param include_sonnet_tau_zero,include_spectral_tau_zero Add a separate
+#'   unregularized baseline for the corresponding engine. These evaluations
+#'   default to `TRUE` and do not affect the tuner-derived oracle grid.
 #' @param matching_method Label-alignment method used for accuracy.
 #' @param confirm_large Confirm potentially factorial brute-force matching.
 #' @param sonnet_options Named list of additional options passed to [sonnet()].
@@ -3614,9 +3620,15 @@ mult_reg_sonnet <- function(
 #' A <- generate_sbm(n = 200, K = 3, alpha = 0.5, beta = 0.1,
 #'                   seed = 41, ncores = 1)
 #' truth <- get_generator_parameters(A)$g_true
+#' netcrop_fit <- netcrop_tune_regularizer(
+#'   A, K = 3, tau_candidates = c(0, 0.1),
+#'   num_subnetworks = 2, overlap_size = 20,
+#'   nrep = 1, ncores = 1, seed = 42, verbose = FALSE
+#' )
 #' oracle_plotter(
-#'   A, g_true = truth, tau_candidates = c(0, 0.1), K = 3,
-#'   engines = "spectral_cluster", ncores = 1, seed = 42,
+#'   A, g_true = truth, K = 3,
+#'   netcrop_outcomes = netcrop_fit,
+#'   engines = "spectral_cluster", ncores = 1, seed = 43,
 #'   verbose = FALSE,
 #'   spectral_cluster_options = list(spectral_engine = "base")
 #' )
@@ -3628,7 +3640,6 @@ mult_reg_sonnet <- function(
 oracle_plotter <- function(
     A,
     g_true,
-    tau_candidates,
     K = NULL,
     netcrop_outcomes = NULL,
     dkest_outcomes = NULL,
@@ -3636,6 +3647,8 @@ oracle_plotter <- function(
     include_netcrop_mode = TRUE,
     losses = NULL,
     engines = c("sonnet", "spectral_cluster"),
+    include_sonnet_tau_zero = TRUE,
+    include_spectral_tau_zero = TRUE,
     matching_method = c("greedy", "hungarian", "brute_force"),
     confirm_large = NULL,
     sonnet_options = list(),
@@ -3729,16 +3742,11 @@ oracle_plotter <- function(
     stop("K must be smaller than the shared network dimension.",
          call. = FALSE)
   }
-  if (!is.numeric(tau_candidates) || length(tau_candidates) < 1L ||
-      anyNA(tau_candidates) || any(!is.finite(tau_candidates)) ||
-      any(tau_candidates < 0) || anyDuplicated(tau_candidates)) {
-    stop("tau_candidates must contain unique finite non-negative numbers.",
-         call. = FALSE)
-  }
-  tau_candidates <- as.numeric(tau_candidates)
   logical_inputs <- list(
     include_netcrop_mean = include_netcrop_mean,
     include_netcrop_mode = include_netcrop_mode,
+    include_sonnet_tau_zero = include_sonnet_tau_zero,
+    include_spectral_tau_zero = include_spectral_tau_zero,
     verbose = verbose,
     force_windows = force_windows,
     ram_check = ram_check
@@ -3818,11 +3826,75 @@ oracle_plotter <- function(
         stop(algorithm, " outcome ", network_id,
              " does not use the requested K.", call. = FALSE)
       }
+      candidates <- outcome$tau_candidates
+      if (!is.numeric(candidates) || length(candidates) < 1L ||
+          anyNA(candidates) || any(!is.finite(candidates)) ||
+          any(candidates < 0) || anyDuplicated(candidates)) {
+        stop(algorithm, " outcome ", network_id,
+             " lacks valid tau_candidates.", call. = FALSE)
+      }
     }
     invisible(NULL)
   }
   validate_outcomes(netcrop_outcomes, "NETCROP")
   validate_outcomes(dkest_outcomes, "DKEST")
+  if (is.null(netcrop_outcomes) && is.null(dkest_outcomes)) {
+    stop(
+      "At least one of netcrop_outcomes or dkest_outcomes must be supplied.",
+      call. = FALSE
+    )
+  }
+  tau_equal <- function(x, y) {
+    abs(x - y) <= sqrt(.Machine$double.eps) * max(1, abs(x), abs(y))
+  }
+  candidate_sets <- c(
+    if (!is.null(netcrop_outcomes)) {
+      lapply(netcrop_outcomes, function(outcome) {
+        as.numeric(outcome$tau_candidates)
+      })
+    },
+    if (!is.null(dkest_outcomes)) {
+      lapply(dkest_outcomes, function(outcome) {
+        as.numeric(outcome$tau_candidates)
+      })
+    }
+  )
+  same_candidates <- function(x, y) {
+    length(x) == length(y) && all(vapply(
+      x,
+      function(value) any(vapply(y, tau_equal, logical(1), value)),
+      logical(1)
+    ))
+  }
+  candidate_grids_match <- all(vapply(
+    candidate_sets[-1L],
+    same_candidates,
+    logical(1),
+    candidate_sets[[1L]]
+  ))
+  tau_candidates <- candidate_sets[[1L]]
+  if (length(candidate_sets) > 1L) {
+    for (candidate_set in candidate_sets[-1L]) {
+      tau_candidates <- tau_candidates[vapply(
+        tau_candidates,
+        function(value) {
+          any(vapply(candidate_set, tau_equal, logical(1), value))
+        },
+        logical(1)
+      )]
+    }
+  }
+  if (length(tau_candidates) == 0L) {
+    stop("The supplied tuner outcomes have no common tau candidates.",
+         call. = FALSE)
+  }
+  if (!candidate_grids_match) {
+    warning(
+      "Tuner tau candidate grids differ; using their intersection: ",
+      paste(tau_candidates, collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
   if (!is.null(losses) &&
       (!is.character(losses) || length(losses) < 1L || anyNA(losses) ||
        any(!nzchar(losses)))) {
@@ -3863,8 +3935,48 @@ oracle_plotter <- function(
     }
     accuracy
   }
-  tau_equal <- function(x, y) {
-    abs(x - y) <= sqrt(.Machine$double.eps) * max(1, abs(x), abs(y))
+  cluster_defaults <- function(engine, use_dcbm) {
+    switch(
+      engine,
+      clara = list(
+        metric = if (use_dcbm) "manhattan" else "euclidean",
+        cluster.only = TRUE,
+        samples = 5L
+      ),
+      kmeans = list(nstart = 100L, iter.max = 10^7),
+      pam = list(
+        metric = if (use_dcbm) "manhattan" else "euclidean",
+        cluster.only = TRUE
+      )
+    )
+  }
+  resolve_cluster_arguments <- function(
+      arguments,
+      inherited_engine = "clara",
+      inherited_options = list(),
+      use_dcbm = FALSE) {
+    engine_was_overridden <- "cluster_engine" %in% names(arguments)
+    engine <- if (engine_was_overridden) {
+      match.arg(arguments$cluster_engine, c("clara", "kmeans", "pam"))
+    } else {
+      match.arg(inherited_engine, c("clara", "kmeans", "pam"))
+    }
+    defaults <- cluster_defaults(engine, use_dcbm)
+    if (!engine_was_overridden && length(inherited_options) > 0L) {
+      defaults <- utils::modifyList(
+        defaults, inherited_options, keep.null = TRUE
+      )
+    }
+    supplied_options <- if (is.null(arguments$cluster_options)) {
+      list()
+    } else {
+      arguments$cluster_options
+    }
+    arguments$cluster_engine <- engine
+    arguments$cluster_options <- utils::modifyList(
+      defaults, supplied_options, keep.null = TRUE
+    )
+    arguments
   }
   plot_seed <- function(network_id, engine_offset) {
     if (is.null(seed)) return(NULL)
@@ -3964,6 +4076,9 @@ oracle_plotter <- function(
       "force_windows", "ram_check", "failure_handling", "retain_fits"
     )] <- NULL
     outcome_algorithm <- NULL
+    use_dcbm <- FALSE
+    inherited_engine <- "clara"
+    inherited_cluster_options <- list()
     if (!is.null(outcome)) {
       outcome_algorithm <- if (is.null(outcome$algorithm)) {
         "NETCROP"
@@ -3978,31 +4093,39 @@ oracle_plotter <- function(
         spectral_engine = "RSpectra"
       )
       if (outcome_algorithm == "NETCROP") {
+        use_dcbm <- identical(outcome$model, "DCBM")
+        inherited_engine <- if (!is.null(outcome$options$cluster_engine)) {
+          outcome$options$cluster_engine
+        } else if (use_dcbm) {
+          "clara"
+        } else {
+          "kmeans"
+        }
+        inherited_cluster_options <- if (
+            is.null(outcome$options$cluster_options)) {
+          list()
+        } else {
+          outcome$options$cluster_options
+        }
         derived <- c(derived, list(
           num_subnetworks = outcome$num_subnetworks,
           overlap_size = outcome$effective_overlap_size,
           extra_nrep = 0L,
           matching_method = outcome$options$matching_method,
-          spectral_options = outcome$options$spectral_options,
-          cluster_engine = if (identical(outcome$model, "DCBM")) {
-            "clara"
-          } else {
-            "kmeans"
-          },
-          cluster_options = utils::modifyList(
-            if (identical(outcome$model, "DCBM")) {
-              list(metric = "manhattan", cluster.only = TRUE, samples = 5L)
-            } else {
-              list(nstart = 100L, iter.max = 10^7)
-            },
-            outcome$options$cluster_options,
-            keep.null = TRUE
-          )
+          spectral_options = outcome$options$spectral_options
         ))
+      } else {
+        use_dcbm <- identical(outcome$model, "DCBM")
       }
       derived <- derived[!vapply(derived, is.null, logical(1))]
       arguments <- utils::modifyList(derived, arguments, keep.null = TRUE)
     }
+    arguments <- resolve_cluster_arguments(
+      arguments,
+      inherited_engine = inherited_engine,
+      inherited_options = inherited_cluster_options,
+      use_dcbm = use_dcbm
+    )
     fit_by_tau <- vector("list", length(tau_values))
     for (tau_id in seq_along(tau_values)) {
       tau <- tau_values[[tau_id]]
@@ -4015,26 +4138,6 @@ oracle_plotter <- function(
             "none"
           }
         )
-        if (outcome_algorithm == "DKEST") {
-          use_dcbm <- identical(outcome$model, "DCBM")
-          task_defaults$cluster_engine <- if (use_dcbm) {
-            "pam"
-          } else if (tau == 0) {
-            "kmeans"
-          } else {
-            "clara"
-          }
-          task_defaults$cluster_options <- if (use_dcbm) {
-            list(
-              metric = "euclidean", do.swap = FALSE,
-              cluster.only = TRUE, pamonce = 6
-            )
-          } else if (tau == 0) {
-            list(nstart = 100, iter.max = 10^7)
-          } else {
-            list(metric = "euclidean", cluster.only = TRUE)
-          }
-        }
         task_arguments <- utils::modifyList(
           task_defaults, task_arguments, keep.null = TRUE
         )
@@ -4048,7 +4151,7 @@ oracle_plotter <- function(
           ncores = ncores,
           seed = if (!is.null(seed)) {
             plot_seed(network_id, 100000L)
-          } else if (!is.null(outcome$seed)) {
+          } else if (!is.null(outcome) && !is.null(outcome$seed)) {
             outcome$seed
           } else {
             NULL
@@ -4081,78 +4184,67 @@ oracle_plotter <- function(
       "A", "K", "tau_candidates", "ncores", "seed", "verbose",
       "force_windows", "ram_check", "failure_handling", "retain_fits"
     )] <- NULL
+    outcome_algorithm <- NULL
+    use_dcbm <- FALSE
+    inherited_engine <- "clara"
+    inherited_cluster_options <- list()
+    if (!is.null(outcome)) {
+      outcome_algorithm <- if (is.null(outcome$algorithm)) {
+        "NETCROP"
+      } else {
+        toupper(outcome$algorithm)
+      }
+      use_dcbm <- identical(outcome$model, "DCBM")
+      if (outcome_algorithm == "NETCROP") {
+        inherited_engine <- if (!is.null(outcome$options$cluster_engine)) {
+          outcome$options$cluster_engine
+        } else if (use_dcbm) {
+          "clara"
+        } else {
+          "kmeans"
+        }
+        inherited_cluster_options <- if (
+            is.null(outcome$options$cluster_options)) {
+          list()
+        } else {
+          outcome$options$cluster_options
+        }
+      }
+      derived <- list(
+        laplacian = outcome$options$use_laplacian,
+        normalize_laplacian = TRUE,
+        row_normalize = use_dcbm,
+        spectral_method = "eigen",
+        spectral_engine = "RSpectra",
+        spectral_options = if (outcome_algorithm == "NETCROP") {
+          outcome$options$spectral_options
+        } else {
+          NULL
+        }
+      )
+      derived <- derived[!vapply(derived, is.null, logical(1))]
+      arguments <- utils::modifyList(derived, arguments, keep.null = TRUE)
+    }
+    arguments <- resolve_cluster_arguments(
+      arguments,
+      inherited_engine = inherited_engine,
+      inherited_options = inherited_cluster_options,
+      use_dcbm = use_dcbm
+    )
     fit_by_tau <- vector("list", length(tau_values))
     for (tau_id in seq_along(tau_values)) {
       tau <- tau_values[[tau_id]]
-      task_arguments <- arguments
-      if (!is.null(outcome)) {
-        outcome_algorithm <- if (is.null(outcome$algorithm)) {
-          "NETCROP"
-        } else {
-          toupper(outcome$algorithm)
-        }
-        use_dcbm <- identical(outcome$model, "DCBM")
-        cluster_engine <- if (outcome_algorithm == "NETCROP") {
-          if (use_dcbm) "clara" else "kmeans"
-        } else if (use_dcbm) {
-          "pam"
-        } else if (tau == 0) {
-          "kmeans"
-        } else {
-          "clara"
-        }
-        cluster_options <- if (outcome_algorithm == "NETCROP") {
-          utils::modifyList(
-            if (use_dcbm) {
-              list(metric = "manhattan", cluster.only = TRUE, samples = 5L)
-            } else {
-              list(nstart = 100L, iter.max = 10^7)
-            },
-            outcome$options$cluster_options,
-            keep.null = TRUE
-          )
-        } else if (use_dcbm) {
-          list(
-            metric = "euclidean", do.swap = FALSE,
-            cluster.only = TRUE, pamonce = 6
-          )
-        } else if (tau == 0) {
-          list(nstart = 100, iter.max = 10^7)
-        } else {
-          list(metric = "euclidean", cluster.only = TRUE)
-        }
-        task_arguments <- utils::modifyList(
-          list(
-            laplacian = outcome$options$use_laplacian,
-            normalize_laplacian = TRUE,
-            handle_zero_degree_nodes = if (tau == 0) {
-              "random_label"
-            } else {
-              "none"
-            },
-            row_normalize = use_dcbm,
-            spectral_method = "eigen",
-            spectral_engine = "RSpectra",
-            spectral_options = if (outcome_algorithm == "NETCROP") {
-              if (is.null(outcome$options$spectral_options)) {
-                list()
-              } else {
-                outcome$options$spectral_options
-              }
-            } else {
-              if (is.null(task_arguments$spectral_options)) {
-                list()
-              } else {
-                task_arguments$spectral_options
-              }
-            },
-            cluster_engine = cluster_engine,
-            cluster_options = cluster_options
-          ),
-          task_arguments,
-          keep.null = TRUE
-        )
-      }
+      task_arguments <- utils::modifyList(
+        list(
+          handle_zero_degree_nodes = if (tau == 0) {
+            "random_label"
+          } else {
+            "none"
+          }
+        ),
+        arguments,
+        keep.null = TRUE
+      )
       fit_by_tau[[tau_id]] <- do.call(
         mult_reg_spectral_cluster,
         c(list(
@@ -4162,7 +4254,7 @@ oracle_plotter <- function(
           ncores = ncores,
           seed = if (!is.null(seed)) {
             plot_seed(network_id, 200000L)
-          } else if (!is.null(outcome$seed)) {
+          } else if (!is.null(outcome) && !is.null(outcome$seed)) {
             outcome$seed
           } else {
             NULL
@@ -4189,8 +4281,7 @@ oracle_plotter <- function(
     names(fit_by_tau) <- as.character(tau_values)
     fit_by_tau
   }
-  use_selection_plot <- !is.null(netcrop_outcomes) ||
-    !is.null(dkest_outcomes)
+  use_selection_plot <- TRUE
   for (network_id in seq_along(A_list)) {
     truth <- as.integer(truth_list[[network_id]])
     netcrop_outcome <- if (is.null(netcrop_outcomes)) {
@@ -4225,11 +4316,7 @@ oracle_plotter <- function(
         )
       )
     }
-    required_tau <- if (use_selection_plot) {
-      unique(c(tau_candidates, selections$tau))
-    } else {
-      tau_candidates
-    }
+    base_required_tau <- unique(c(tau_candidates, selections$tau))
     
     for (engine in engines) {
       engine_label <- if (engine == "sonnet") {
@@ -4241,6 +4328,16 @@ oracle_plotter <- function(
         if (!is.null(netcrop_outcome)) netcrop_outcome else dkest_outcome
       } else {
         if (!is.null(dkest_outcome)) dkest_outcome else netcrop_outcome
+      }
+      include_tau_zero <- if (engine == "sonnet") {
+        include_sonnet_tau_zero
+      } else {
+        include_spectral_tau_zero
+      }
+      required_tau <- base_required_tau
+      if (include_tau_zero &&
+          !any(vapply(required_tau, tau_equal, logical(1), 0))) {
+        required_tau <- c(required_tau, 0)
       }
       fits <- if (engine == "sonnet") {
         run_sonnet_values(network_id, required_tau, parameter_outcome)
@@ -4257,19 +4354,6 @@ oracle_plotter <- function(
           truth
         )
       }
-      if (!use_selection_plot) {
-        for (tau_id in seq_along(tau_candidates)) {
-          add_record(
-            network_id,
-            engine_label,
-            paste0("tau = ", tau_candidates[[tau_id]]),
-            tau_candidates[[tau_id]],
-            candidate_accuracy[[tau_id]]
-          )
-        }
-        next
-      }
-      
       oracle_ids <- which(candidate_accuracy == max(candidate_accuracy))
       oracle_id <- oracle_ids[which.min(tau_candidates[oracle_ids])]
       add_record(
@@ -4279,14 +4363,16 @@ oracle_plotter <- function(
         tau_candidates[[oracle_id]],
         candidate_accuracy[[oracle_id]]
       )
-      zero_id <- which(vapply(tau_candidates, tau_equal, logical(1), 0))
-      if (length(zero_id) == 1L) {
+      if (include_tau_zero) {
+        zero_fit_id <- which(vapply(
+          required_tau, tau_equal, logical(1), 0
+        ))
         add_record(
           network_id,
           engine_label,
           "tau = 0",
           0,
-          candidate_accuracy[[zero_id]]
+          match_accuracy(extract_label(fits[[zero_fit_id]], 0), truth)
         )
       }
       for (selection_id in seq_len(nrow(selections))) {
@@ -4397,6 +4483,9 @@ oracle_plotter <- function(
     matching_method = matching_method,
     include_netcrop_mean = include_netcrop_mean,
     include_netcrop_mode = include_netcrop_mode,
+    include_sonnet_tau_zero = include_sonnet_tau_zero,
+    include_spectral_tau_zero = include_spectral_tau_zero,
+    candidate_grids_match = candidate_grids_match,
     requested_losses = losses,
     netcrop_outcomes_provided = !is.null(netcrop_outcomes),
     dkest_outcomes_provided = !is.null(dkest_outcomes),

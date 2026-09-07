@@ -22,6 +22,7 @@ netcrop_tune_regularizer(
   loss_types = NULL,
   label_reference = c("full_network", "leave_pair_out"),
   spectral_options = list(),
+  cluster_engine = c("clara", "kmeans", "pam"),
   cluster_options = list(),
   estimator_options = list(),
   matching_method = c("greedy", "hungarian", "brute_force"),
@@ -73,8 +74,13 @@ a leave-pair-out reference.}
 \item{spectral_options}{Named list of additional options passed to
 \code{\link[=spectral_cluster]{spectral_cluster()}}.}
 
-\item{cluster_options}{Named list of additional options passed to
-\code{\link[stats:kmeans]{stats::kmeans()}} for SBM fitting or \code{\link[cluster:clara]{cluster::clara()}} for DCBM fitting.}
+\item{cluster_engine}{Clustering backend used by \code{\link[=spectral_cluster]{spectral_cluster()}}:
+\code{"clara"} (the default), \code{"kmeans"}, or \code{"pam"}.}
+
+\item{cluster_options}{Named list of additional options passed to the
+function selected by \code{cluster_engine}: \code{\link[cluster:clara]{cluster::clara()}},
+\code{\link[stats:kmeans]{stats::kmeans()}}, or \code{\link[cluster:pam]{cluster::pam()}}. Defaults are chosen for the
+selected backend and model, then overridden by this list.}
 
 \item{estimator_options}{Named list of additional options passed to
 \code{\link[=estimate_sbm]{estimate_sbm()}} for SBM fitting or \code{\link[=estimate_dcbm]{estimate_dcbm()}} for DCBM fitting.}
@@ -119,7 +125,11 @@ The function clusters overlapping subnetworks for every candidate, aligns
 their labels, estimates block-model probabilities, and evaluates held-out
 edges between non-overlap pieces. Missing partition parameters are selected
 with \code{\link[=netcrop_param_select]{netcrop_param_select()}}. \code{K = 1} returns invisibly because no
-clustering-based regularizer selection is required.
+clustering-based regularizer selection is required. The spectral and
+clustering defaults match \code{\link[=netcrop_blockmodel]{netcrop_blockmodel()}}: eigenvectors from
+\code{RSpectra}, CLARA clustering, Euclidean distance for SBM, Manhattan distance
+for DCBM, and row normalization for DCBM. User option lists override the
+corresponding defaults without changing tuner-controlled inputs.
 }
 \examples{
 \donttest{

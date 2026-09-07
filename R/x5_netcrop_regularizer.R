@@ -85,7 +85,11 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 #' their labels, estimates block-model probabilities, and evaluates held-out
 #' edges between non-overlap pieces. Missing partition parameters are selected
 #' with [netcrop_param_select()]. `K = 1` returns invisibly because no
-#' clustering-based regularizer selection is required.
+#' clustering-based regularizer selection is required. The spectral and
+#' clustering defaults match [netcrop_blockmodel()]: eigenvectors from
+#' `RSpectra`, CLARA clustering, Euclidean distance for SBM, Manhattan distance
+#' for DCBM, and row normalization for DCBM. User option lists override the
+#' corresponding defaults without changing tuner-controlled inputs.
 #'
 #' @param A Finite symmetric, loop-free adjacency matrix.
 #' @param K Fixed positive number of communities.
@@ -103,8 +107,12 @@ pair_hamming_loss <- function(g_1, g_2, g_3, g_4) {
 #'   a leave-pair-out reference.
 #' @param spectral_options Named list of additional options passed to
 #'   [spectral_cluster()].
-#' @param cluster_options Named list of additional options passed to
-#'   [stats::kmeans()] for SBM fitting or [cluster::clara()] for DCBM fitting.
+#' @param cluster_engine Clustering backend used by [spectral_cluster()]:
+#'   `"clara"` (the default), `"kmeans"`, or `"pam"`.
+#' @param cluster_options Named list of additional options passed to the
+#'   function selected by `cluster_engine`: [cluster::clara()],
+#'   [stats::kmeans()], or [cluster::pam()]. Defaults are chosen for the
+#'   selected backend and model, then overridden by this list.
 #' @param estimator_options Named list of additional options passed to
 #'   [estimate_sbm()] for SBM fitting or [estimate_dcbm()] for DCBM fitting.
 #' @param matching_method Label-alignment method.
@@ -153,6 +161,7 @@ netcrop_tune_regularizer <- function(
     loss_types = NULL,
     label_reference = c("full_network", "leave_pair_out"),
     spectral_options = list(),
+    cluster_engine = c("clara", "kmeans", "pam"),
     cluster_options = list(),
     estimator_options = list(),
     matching_method = c("greedy", "hungarian", "brute_force"),
@@ -170,6 +179,7 @@ netcrop_tune_regularizer <- function(
     retain_intermediates = c("all", "minimal")) {
   call <- match.call()
   dcbm_est_method <- match.arg(dcbm_est_method)
+  cluster_engine <- match.arg(cluster_engine)
   matching_method <- match.arg(matching_method)
   label_reference <- match.arg(label_reference)
   retain_intermediates <- match.arg(retain_intermediates)
@@ -218,7 +228,9 @@ netcrop_tune_regularizer <- function(
     )
   }
   required_packages <- c("RSpectra", "tibble")
-  if (isTRUE(use_dcbm)) required_packages <- c(required_packages, "cluster")
+  if (isTRUE(use_dcbm) || cluster_engine != "kmeans") {
+    required_packages <- c(required_packages, "cluster")
+  }
   if (inherits(A, "Matrix")) required_packages <- c(required_packages, "Matrix")
   missing_packages <- unique(required_packages)[!vapply(
     unique(required_packages), requireNamespace, logical(1), quietly = TRUE
@@ -402,7 +414,12 @@ netcrop_tune_regularizer <- function(
   unsupported_spectral <- setdiff(
     names(spectral_options), names(formals(spectral_cluster))
   )
-  cluster_function <- if (use_dcbm) cluster::clara else stats::kmeans
+  cluster_function <- switch(
+    cluster_engine,
+    clara = cluster::clara,
+    kmeans = stats::kmeans,
+    pam = cluster::pam
+  )
   unsupported_cluster <- setdiff(
     names(cluster_options),
     setdiff(names(formals(cluster_function)), c("x", "k", "centers"))
@@ -416,6 +433,22 @@ netcrop_tune_regularizer <- function(
       call. = FALSE
     )
   }
+  cluster_defaults <- switch(
+    cluster_engine,
+    clara = list(
+      metric = if (use_dcbm) "manhattan" else "euclidean",
+      cluster.only = TRUE,
+      samples = 5L
+    ),
+    kmeans = list(nstart = 100L, iter.max = 10^7),
+    pam = list(
+      metric = if (use_dcbm) "manhattan" else "euclidean",
+      cluster.only = TRUE
+    )
+  )
+  resolved_cluster_options <- utils::modifyList(
+    cluster_defaults, cluster_options, keep.null = TRUE
+  )
   estimator_function <- if (use_dcbm) estimate_dcbm else estimate_sbm
   protected_estimator <- intersect(
     names(estimator_options),
@@ -461,21 +494,14 @@ netcrop_tune_regularizer <- function(
       if (inherits(A_work, "sparseMatrix") && tau == 0) {
         resolved_spectral_options$force_engine <- TRUE
       }
-      cluster_defaults <- if (use_dcbm) {
-        list(metric = "manhattan", cluster.only = TRUE, samples = 5L)
-      } else {
-        list(nstart = 100L, iter.max = 10^7)
-      }
       fit_arguments <- c(
         list(
           A = A_work, K = K, laplacian = use_laplacian,
           normalize_laplacian = TRUE, regularize_tau = tau,
           handle_zero_degree_nodes = if (tau == 0) "random_label" else "none",
           row_normalize = use_dcbm, spectral_engine = "RSpectra",
-          cluster_engine = if (use_dcbm) "clara" else "kmeans",
-          cluster_options = utils::modifyList(
-            cluster_defaults, cluster_options, keep.null = TRUE
-          ),
+          cluster_engine = cluster_engine,
+          cluster_options = resolved_cluster_options,
           ram_check = FALSE, validate_inputs = FALSE
         ),
         resolved_spectral_options
@@ -1062,7 +1088,8 @@ netcrop_tune_regularizer <- function(
       use_laplacian = use_laplacian,
       dcbm_est_method = dcbm_est_method,
       spectral_options = spectral_options,
-      cluster_options = cluster_options,
+      cluster_engine = cluster_engine,
+      cluster_options = resolved_cluster_options,
       estimator_options = estimator_options,
       matching_method = matching_method,
       label_reference = label_reference,
@@ -1341,7 +1368,6 @@ plot.netcrop_regularizer <- function(x, aggregate = TRUE, ...) {
 #     A = list(net1, net2),
 #     g_true = list(attributes(net1)$generator_parameters$g_true,
 #                   attributes(net2)$generator_parameters$g_true),
-#     tau_candidates = seq(0, 2, by = 0.05),
 #     netcrop_outcomes = list(nc_out1, nc_out2),
 #     dkest_outcomes = list(dk.out1, dk.out2),
 #     include_netcrop_mean = TRUE,

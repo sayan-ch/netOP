@@ -23,7 +23,6 @@ roxygen2::roxygenise()
 
 Review and commit generated changes in DESCRIPTION, NAMESPACE, man/,
 R/RcppExports.R, and src/RcppExports.cpp. CI regenerates them and rejects drift.
-The minimum-R job uses the committed generated files, without modern generators.
 
 Fast functional checks:
 
@@ -60,15 +59,11 @@ each test. Parallel regression tests
 exercise native and forced-multisession workers, task errors, restoration of
 the caller's future plan/environment, and seeded generation/SONNET agreement.
 
-## Minimum R and other platforms
+## Other platforms
 
 Every push to main and pull request runs the current Linux/macOS/Windows checks,
-Linux R-devel, and a separate **R 4.1.0** check on Ubuntu 22.04. The minimum-R
-job uses `https://packagemanager.posit.co/cran/2023-04-01` so dependencies remain
-compatible with that R version. It builds/checks source, runs examples and
-vignettes, and runs the installed test suite. It logs dependency versions and
-session information. This snapshot is for compatibility testing, not a runtime
-repository override imposed by netOP. Refresh it deliberately and rerun checks.
+plus Linux R-devel. These jobs build/check source, run examples and vignettes,
+and run the installed test suite.
 
 Inspect `.github/workflows/R-CMD-check.yaml` for the exact reproducible setup.
 R 4.4/4.5 and Intel macOS also receive the full installed suite when release

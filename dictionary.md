@@ -33,7 +33,7 @@ netOP/
 ├── README.md, NEWS.md        User-facing package and release documentation
 ├── CONTRIBUTING.md           Tracked contribution and naming rules
 ├── DEVELOPMENT.md            Check and draft-release procedures
-├── .github/workflows/        Current/minimum-R checks and manual release builds
+├── .github/workflows/        Current checks and manual release builds
 ├── .github/scripts/          Release validation against installed packages
 └── dictionary.md             This living function reference
 ```

@@ -21,6 +21,6 @@ Contributions must:
 Do not introduce `sourceCpp()`, runtime package installation, machine-specific
 paths, credentials, or a dependency on large packages.
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for reproducible checks, minimum-R testing,
-and the draft-release procedure. Generated files must be committed and must
-remain unchanged when regenerated with the CI-pinned generators.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for reproducible checks and the
+draft-release procedure. Generated files must be committed and must remain
+unchanged when regenerated with the CI-pinned generators.

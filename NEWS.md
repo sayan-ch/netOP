@@ -2,8 +2,8 @@
 
 - Build release binaries from one checked source bundle, including vignettes,
   and validate every binary before attaching the complete set to a draft.
-- Check generated-file consistency and the declared minimum R 4.1.0 with
-  compatible dependencies; expand parallel-backend regression coverage.
+- Check generated-file consistency and expand parallel-backend regression
+  coverage.
 - Synchronize package help and installation instructions and clarify sparse
   summary documentation.
 

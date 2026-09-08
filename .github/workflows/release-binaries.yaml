@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing draft release tag, such as v0.1.1
+        description: Existing empty release tag, such as v0.1.1
         required: true
         type: string
 
@@ -15,14 +15,14 @@ env:
   RELEASE_TAG: ${{ inputs.tag }}
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
-# A main-branch push or publishing a draft must never start another build.
+# A main-branch push or publishing a release must never start another build.
 concurrency:
   group: release-artifacts-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   preflight:
-    name: Verify draft and freeze source commit
+    name: Verify release and freeze source commit
     runs-on: ubuntu-latest
     outputs:
       commit: ${{ steps.source.outputs.commit }}
@@ -30,16 +30,16 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
-      - name: Require an existing empty draft release
+      - name: Require an existing empty release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view "$RELEASE_TAG" --json isDraft,assets > release.json
+          gh release view "$RELEASE_TAG" --json assets > release.json
           python3 - <<'PYTHON'
           import json
           release = json.load(open("release.json"))
-          if not release["isDraft"] or release["assets"]:
-              raise SystemExit("Use an existing empty draft; published assets are never overwritten.")
+          if release["assets"]:
+              raise SystemExit("Use an existing empty release; existing assets are never overwritten.")
           PYTHON
         shell: bash
       - id: source
@@ -326,7 +326,7 @@ jobs:
           if-no-files-found: error
 
   attach:
-    name: Attach complete validated set to draft
+    name: Attach complete validated set to release
     needs: [preflight, source, binary]
     runs-on: ubuntu-latest
     permissions:
@@ -342,16 +342,16 @@ jobs:
           path: release-assets
       - name: Verify complete asset set and calculate checksums
         run: python3 .github/scripts/verify-release-assets.py
-      - name: Attach assets to the still-empty draft
+      - name: Attach assets to the still-empty release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view "$RELEASE_TAG" --json isDraft,assets > release.json
+          gh release view "$RELEASE_TAG" --json assets > release.json
           python3 - <<'PYTHON'
           import json
           release = json.load(open("release.json"))
-          if not release["isDraft"] or release["assets"]:
-              raise SystemExit("The release must remain an empty draft until attachment.")
+          if release["assets"]:
+              raise SystemExit("The release must remain empty until attachment.")
           PYTHON
           gh release upload "$RELEASE_TAG" release-assets/*
         shell: bash

@@ -99,30 +99,29 @@ and tag the tested commit with the matching stable version. Then:
 ```sh
 git tag -a v0.1.1 -m "netOP 0.1.1"
 git push origin v0.1.1
-gh release create v0.1.1 --verify-tag --draft --title "netOP 0.1.1" \
+gh release create v0.1.1 --verify-tag --title "netOP 0.1.1" \
   --notes "See NEWS.md for release changes."
 gh workflow run release-binaries.yaml --ref main -f tag=v0.1.1
 ```
 
-The workflow requires an existing empty draft and freezes the tag's commit.
+The workflow requires an existing empty release and freezes the tag's commit.
 It builds and checks one source tarball with rendered vignettes, transfers that
 exact bundle to all nine binary jobs, and checks each installed binary's version,
 compiled code, vignettes, and full test suite. Only after all jobs succeed does
 one attachment job validate the ten-file inventory, generate SHA256SUMS, and
-upload everything to the draft. Published assets are never overwritten.
+upload everything to the release. Existing assets are never overwritten.
 
 Monitor with `gh run list --workflow release-binaries.yaml`, then
-`gh run watch RUN_ID --exit-status`. The draft must have nine binaries, the
-package source tarball, and SHA256SUMS. Review before publishing manually:
+`gh run watch RUN_ID --exit-status`. The release must have nine binaries, the
+package source tarball, and SHA256SUMS. Review with:
 
 ```sh
 gh release view v0.1.1 --json assets --jq '.assets[].name'
-gh release edit v0.1.1 --draft=false --latest
 ```
 
 If a build fails before attachment, use `gh run rerun RUN_ID --failed`. If an
-upload is interrupted, the draft may contain a partial set: inspect and remove
-those draft assets explicitly before rerunning the failed attachment job. The
+upload is interrupted, the release may contain a partial set: inspect and remove
+those assets explicitly before rerunning the failed attachment job. The
 workflow refuses to overwrite them. Never move a published release tag.
 
 After freezing/submitting 0.1.1, a separate development commit can advance main

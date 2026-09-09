@@ -12,12 +12,14 @@ spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM a
 
 ## Installation
 
-### Binary package (recommended)
+### Binary package (recommended for most macOS and Windows systems)
 
-The planned 0.1.1 release provides binaries for R 4.4, R 4.5, and R 4.6 on
-Apple Silicon and Intel macOS and on x86-64 Windows. Until that release is
-published, use the development installation below or select version 0.1.0
-in the binary installer. The following code selects the matching
+The 0.1.1 release provides binaries for R 4.4, R 4.5, and R 4.6 on
+Apple Silicon and Intel macOS and on x86-64 Windows. The R 4.4 and R 4.5 Apple Silicon binaries and all Intel binaries target macOS
+11 or newer. The R 4.6 Apple Silicon binary follows the official R 4.6 runtime
+and requires macOS 14 or newer.
+
+The following code selects the matching
 asset and installs netOP without compiling it locally:
 
 ```r
@@ -89,17 +91,13 @@ local({
 })
 ```
 
-The R 4.4 and R 4.5 Apple Silicon binaries and all Intel binaries target macOS
-11 or newer. The R 4.6 Apple Silicon binary follows the official R 4.6 runtime
-and requires macOS 14 or newer.
-
 Linux distributions do not share a portable R binary-package format. Each
 GitHub release therefore includes a standard source tarball for Linux and
 other Unix systems. Within the supported macOS and Windows versions, separate
 assets are needed for each R major/minor series and processor architecture;
 ordinary operating-system patch updates do not require another asset.
 
-After 0.1.1 is published, install its released source package on Linux or
+Install the released 0.1.1 source package on Linux or
 another Unix-like system with:
 
 ```r

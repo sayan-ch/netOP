@@ -12,7 +12,7 @@ spectral and latent-space methods, SONNET and NETCROP for SBM, DCBM, RDPG, LSM a
 
 ## Installation
 
-### Binary package (recommended for most macOS and Windows systems)
+### Binary package (recommended for compatible macOS and Windows systems)
 
 The 0.1.1 release provides binaries for R 4.4, R 4.5, and R 4.6 on
 Apple Silicon and Intel macOS and on x86-64 Windows. The R 4.4 and R 4.5 Apple Silicon binaries and all Intel binaries target macOS

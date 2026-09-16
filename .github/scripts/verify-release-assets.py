@@ -7,7 +7,7 @@ import re
 
 tag = os.environ["RELEASE_TAG"]
 if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-    raise SystemExit("Expected a stable version tag such as v0.1.1")
+    raise SystemExit("Expected a stable version tag such as v0.1.2")
 version = tag[1:]
 prefix = f"netOP_{version}"
 expected = {f"{prefix}.tar.gz"}

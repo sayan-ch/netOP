@@ -1,7 +1,7 @@
 # Developing and releasing netOP
 
 Run commands from the repository root. Release preparation keeps DESCRIPTION
-at `0.1.1`; creating a release or release binaries is a separate manual action.
+at `0.1.2`; creating a release or release binaries is a separate manual action.
 
 ## Routine checks
 
@@ -37,10 +37,10 @@ installed help indexes and the API allowlist. In Terminal:
 
 ```sh
 R CMD build .
-R CMD check --as-cran netOP_0.1.1.tar.gz
+R CMD check --as-cran netOP_0.1.2.tar.gz
 mkdir -p local-release-assets/test-library
 R CMD INSTALL --preclean --install-tests \
-  --library=local-release-assets/test-library netOP_0.1.1.tar.gz
+  --library=local-release-assets/test-library netOP_0.1.2.tar.gz
 ```
 
 Then in a fresh R session:
@@ -97,11 +97,11 @@ release starts it. First commit all release changes, require passing checks,
 and tag the tested commit with the matching stable version. Then:
 
 ```sh
-git tag -a v0.1.1 -m "netOP 0.1.1"
-git push origin v0.1.1
-gh release create v0.1.1 --verify-tag --title "netOP 0.1.1" \
+git tag -a v0.1.2 -m "netOP 0.1.2"
+git push origin v0.1.2
+gh release create v0.1.2 --verify-tag --title "netOP 0.1.2" \
   --notes "See NEWS.md for release changes."
-gh workflow run release-binaries.yaml --ref main -f tag=v0.1.1
+gh workflow run release-binaries.yaml --ref main -f tag=v0.1.2
 ```
 
 The workflow requires an existing empty release and freezes the tag's commit.
@@ -116,7 +116,7 @@ Monitor with `gh run list --workflow release-binaries.yaml`, then
 package source tarball, and SHA256SUMS. Review with:
 
 ```sh
-gh release view v0.1.1 --json assets --jq '.assets[].name'
+gh release view v0.1.2 --json assets --jq '.assets[].name'
 ```
 
 If a build fails before attachment, use `gh run rerun RUN_ID --failed`. If an
@@ -124,6 +124,6 @@ upload is interrupted, the release may contain a partial set: inspect and remove
 those assets explicitly before rerunning the failed attachment job. The
 workflow refuses to overwrite them. Never move a published release tag.
 
-After freezing/submitting 0.1.1, a separate development commit can advance main
-to 0.1.1.9000 and update NEWS and the software citation. That does not require
+After freezing/submitting 0.1.2, a separate development commit can advance main
+to 0.1.2.9000 and update NEWS and the software citation. That does not require
 another binary release.

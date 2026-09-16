@@ -5,7 +5,7 @@ bibentry(
   title = "Network Data Operations and Overlapping Partitions Based Methods for Large Networks",
   author = person("Sayan", "Chakrabarty"),
   year = "2026",
-  note = "R package version 0.1.1",
+  note = "R package version 0.1.2",
   url = "https://github.com/sayan-ch/netOP"
 )
 

@@ -1,3 +1,7 @@
+# netOP 0.1.2
+
+- Revise the package description and explain method acronyms in response to CRAN review.
+
 # netOP 0.1.1
 
 - Build release binaries from one checked source bundle, including vignettes,
